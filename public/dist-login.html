@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mellow Distributor</title>
+<link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
+<link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon.png">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#E3161C">
+<style>@font-face{font-family:Inter;font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-latin-ext.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}@font-face{font-family:Inter;font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-latin.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}</style>
+<script>
+  if (localStorage.getItem('mellow_dist_token')) window.location.href = '/dist';
+</script>
+<style>
+  :root {
+    --maroon: #111111; --red: #E3161C; --red-bright: #c4121a; --gold: #c9a24b;
+    --bg: #F4F4F2; --surface: #ffffff; --border: #E8E8E6; --text: #111111; --text-muted: #6e6e6a;
+    --error: #E3161C; --error-bg: #fdecec; --radius: 14px; --shadow: 0 10px 30px rgba(17, 17, 17, 0.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text);
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .card { width: 100%; max-width: 400px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 36px 28px; }
+  .login-logo { --h: 56px; height: var(--h); margin: 4px auto 14px; display: flex; align-items: flex-start; justify-content: center; gap: 10px; }
+  .login-logo img { height: var(--h); width: auto; display: block; }
+  .login-tag { margin-top: calc(var(--h) * .745); transform: translateY(-50%); line-height: 1; font-size: 14px; font-weight: 600; color: var(--text-muted); }
+  .subtitle { text-align: center; color: var(--text-muted); font-size: 13px; margin: 0 0 26px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; margin-top: 18px; }
+  input {
+    width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font-size: 15px; font-family: inherit;
+  }
+  input:focus { outline: none; border-color: var(--red); }
+  input.input-error { border-color: var(--error); background: var(--error-bg); }
+  .field-error { display: none; color: var(--error); font-size: 12.5px; margin-top: 6px; }
+  .form-error {
+    display: none; background: var(--error-bg); color: var(--error); border: 1px solid var(--error);
+    padding: 10px 12px; border-radius: 10px; font-size: 13.5px; margin-top: 18px;
+  }
+  button[type="submit"] {
+    width: 100%; margin-top: 26px; padding: 14px; border: none; border-radius: 10px; background: var(--red);
+    color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  button[type="submit"]:disabled { opacity: 0.6; cursor: default; }
+  button[type="submit"]:hover:not(:disabled) { background: var(--red-bright); }
+  .badge { text-align: center; margin-top: 20px; font-size: 12px; color: var(--text-muted); letter-spacing: 0.5px; text-transform: uppercase; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="login-logo"><img src="/assets/logo-horizontal.svg" alt="Mellow" ><span class="login-tag">Distributor</span></div>
+
+    <div id="formError" class="form-error"></div>
+
+    <form id="loginForm" novalidate>
+      <label for="phone_number">Phone Number</label>
+      <input id="phone_number" name="phone_number" type="text" placeholder="080 1234 5678" autocomplete="username">
+      <div class="field-error" data-error-for="phone_number"></div>
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" placeholder="Password" autocomplete="current-password">
+      <div class="field-error" data-error-for="password"></div>
+
+      <button type="submit" id="submitBtn">Log In</button>
+    </form>
+    <p class="badge">Distributor Login</p>
+  </div>
+
+<script>
+  function showError(name, message) {
+    var errorEl = document.querySelector('[data-error-for="' + name + '"]');
+    var inputEl = document.querySelector('[name="' + name + '"]');
+    if (errorEl) { errorEl.textContent = message; errorEl.style.display = 'block'; }
+    if (inputEl) inputEl.classList.add('input-error');
+  }
+  function clearErrors(form) {
+    form.querySelectorAll('.field-error').forEach(function (el) { el.style.display = 'none'; el.textContent = ''; });
+    form.querySelectorAll('.input-error').forEach(function (el) { el.classList.remove('input-error'); });
+  }
+  function enableFormKeyNav(form) {
+    form.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      if (e.ctrlKey) { form.requestSubmit(); return; }
+      var focusable = Array.from(form.querySelectorAll('input, select, textarea'))
+        .filter(function (el) { return !el.disabled && el.offsetParent !== null; });
+      var idx = focusable.indexOf(e.target);
+      if (idx > -1 && idx < focusable.length - 1) focusable[idx + 1].focus();
+      else form.requestSubmit();
+    });
+  }
+
+  var form = document.getElementById('loginForm');
+  var submitBtn = document.getElementById('submitBtn');
+  var formError = document.getElementById('formError');
+  enableFormKeyNav(form);
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    clearErrors(form);
+    formError.style.display = 'none';
+
+    var phone = form.phone_number.value.trim();
+    var password = form.password.value;
+    var hasError = false;
+    if (!phone) { showError('phone_number', 'Please enter your phone number.'); hasError = true; }
+    if (!password) { showError('password', 'Please enter your password.'); hasError = true; }
+    if (hasError) return;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Logging in...';
+
+    fetch('/api/dist-auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone_number: phone, password: password }),
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          if (res.data.field) showError(res.data.field, res.data.error);
+          else { formError.style.display = 'block'; formError.textContent = res.data.error || 'Something went wrong.'; }
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Log In';
+          return;
+        }
+        localStorage.setItem('mellow_dist_token', res.data.token);
+        localStorage.setItem('mellow_dist', JSON.stringify(res.data.distributor));
+        window.location.href = '/dist';
+      })
+      .catch(function () {
+        formError.style.display = 'block';
+        formError.textContent = 'Could not reach the server. Please check your connection.';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Log In';
+      });
+  });
+</script>
+</body>
+</html>

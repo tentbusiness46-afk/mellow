@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mellow Distributor</title>
+<link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
+<link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon.png">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#E3161C">
+<style>@font-face{font-family:Inter;font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-latin-ext.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}@font-face{font-family:Inter;font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-latin.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}</style>
+<script>
+  if (!localStorage.getItem('mellow_dist_token')) window.location.href = '/dist-login';
+</script>
+<style>
+  :root {
+    --maroon: #111111; --red: #E3161C; --gold: #c9a24b;
+    --bg: #F4F4F2; --surface: #ffffff; --border: #E8E8E6; --text: #111111; --text-muted: #6e6e6a;
+    --error: #E3161C; --error-bg: #fdecec; --success: #1f8a4c; --success-bg: #eaf7ee; --pending: #b8860b;
+    --shadow: 0 10px 30px rgba(17, 17, 17, 0.05);
+  }
+  * { box-sizing: border-box; }
+  html { overflow-y: scroll; }
+  body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); }
+
+  /* ---------- Topbar (mobile) ---------- */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px;
+    background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-logo { --h: 30px; display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+  .role-tag { margin-top: calc(var(--h) * .745); transform: translateY(-50%); line-height: 1; font-size: 13px; font-weight: 600; color: var(--text-muted); }
+  .hamburger {
+    width: 40px; height: 40px; border-radius: 11px; border: 1px solid var(--border); background: var(--bg);
+    display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0;
+  }
+  .hamburger span { width: 19px; height: 2px; background: var(--text); display: block; border-radius: 2px; }
+
+  /* ---------- Slide-in nav (mobile) / static sidebar (desktop) ---------- */
+  .nav-overlay { position: fixed; inset: 0; background: rgba(17,17,17,0.55); opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 55; }
+  .nav-overlay.open { opacity: 1; pointer-events: auto; }
+
+  .admin-shell { display: flex; }
+
+  .sidebar {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(78vw, 300px);
+    background: linear-gradient(165deg, var(--maroon), #000000);
+    border-radius: 22px 0 0 22px; transform: translateX(100%); transition: transform .28s ease;
+    z-index: 60; padding: 26px 14px; display: flex; flex-direction: column; gap: 4px;
+    box-shadow: -12px 0 32px rgba(0,0,0,0.3); overflow-y: auto;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-logo { display: none; }
+  .nav-link {
+    display: flex; align-items: center; gap: 13px; padding: 13px 15px; border-radius: 14px; text-decoration: none;
+    color: rgba(255,255,255,0.72); font-weight: 600; font-size: 14.5px; border: none; background: none;
+    text-align: left; width: 100%; cursor: pointer; font-family: inherit;
+  }
+  .nav-link svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.16); color: #fff; }
+  .nav-link.logout { margin-top: auto; color: #fff; background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.2); justify-content: center; }
+
+  .admin-content { padding: 22px 18px 60px; max-width: 900px; width: 100%; }
+
+  @media (min-width: 768px) {
+    .hamburger, .nav-overlay, .topbar { display: none; }
+    .sidebar {
+      position: sticky; top: 0; right: auto; left: 0; transform: none; height: 100vh; width: 250px;
+      background: var(--surface); border-right: 1px solid var(--border); border-radius: 0; box-shadow: none;
+      padding: 20px 16px;
+    }
+    .sidebar-logo { --h: 34px; display: flex; align-items: flex-start; gap: 10px; margin-bottom: 26px; padding: 0 8px; cursor: pointer; }
+    .sidebar .nav-link { color: var(--text); }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { background: rgba(227,22,28,0.08); color: var(--red); }
+    .sidebar .nav-link.logout { background: none; border: none; color: var(--error); justify-content: flex-start; }
+    .admin-content { flex: 1; min-width: 0; padding: 36px 40px; }
+  }
+
+  /* ---------- View switching ---------- */
+  .view { display: none; }
+  .view.active { display: block; }
+  h1.view-title { font-weight: 800; font-size: 22px; margin: 0 0 4px; }
+  .view-sub { color: var(--text-muted); font-size: 13.5px; margin: 0 0 24px; }
+
+  /* ---------- Dashboard ---------- */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); }
+  .stat-card .label { font-size: 12.5px; color: var(--text-muted); font-weight: 600; }
+  .stat-card .value { font-weight: 800; font-size: 28px; margin-top: 6px; }
+  .stat-card.accent { background: linear-gradient(135deg, #E3161C, #b8101a); color: #fff; }
+  .stat-card.accent .label { color: rgba(255,255,255,0.8); }
+  .stat-card .value { white-space: nowrap; }
+  .stat-card.hero, .stat-card.wide { grid-column: 1 / -1; }
+  .stat-card.hero { padding: 24px 22px; }
+  .stat-card.hero .value { font-size: 40px; margin-top: 8px; letter-spacing: -0.02em; }
+  @media (min-width: 768px) { .stat-card.hero { padding: 30px 28px; } .stat-card.hero .value { font-size: 52px; } }
+
+  /* ---------- Cards / Users ---------- */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow); }
+  .card-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .card-top .name { font-weight: 700; font-size: 16px; }
+  .card-top .shop { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+  .balance-tag { font-weight: 700; color: var(--red); font-size: 15px; }
+  .user-card { cursor: pointer; transition: border-color 0.15s; }
+  .user-card:hover { border-color: var(--red); }
+  .search-box { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); font-size: 14.5px; font-family: inherit; margin-bottom: 18px; color: var(--text); }
+  .search-box:focus { outline: none; border-color: var(--red); }
+  .empty { text-align: center; color: var(--text-muted); padding: 50px 20px; font-size: 13.5px; }
+
+  /* ---------- User detail ---------- */
+  .user-detail-back { padding: 9px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit; }
+  .ud-hero { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+  .ud-hero .name { font-weight: 800; font-size: 22px; }
+  .ud-hero .shop { font-size: 14px; color: var(--text-muted); margin-top: 2px; }
+  .ud-hero .balance { font-weight: 800; font-size: 24px; color: var(--red); }
+
+  .section-title { display: flex; align-items: center; justify-content: space-between; margin: 26px 0 12px; }
+  .section-title h2 { font-weight: 700; font-size: 16px; margin: 0; }
+
+  .account-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 6px 0; margin-bottom: 16px; }
+  .account-card .group-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 14px 16px 6px; }
+  .account-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-top: 1px solid var(--border); gap: 16px; }
+  .account-card .group-title + .account-row { border-top: none; }
+  .account-row .k { font-size: 13px; color: var(--text-muted); flex-shrink: 0; }
+  .account-row .v { font-size: 13.5px; font-weight: 600; text-align: right; }
+  .verified-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; color: var(--success); }
+  .unverified-tag { font-size: 11.5px; font-weight: 700; color: var(--pending); }
+  .docs-row { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+  .doc-link { padding: 9px 14px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border); text-decoration: none; color: var(--text); font-size: 12.5px; font-weight: 600; }
+
+  .scan-item { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 13px 15px; margin-bottom: 10px; }
+  .scan-item .scan-icon { width: 38px; height: 38px; border-radius: 10px; background: var(--success-bg); color: var(--success); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .scan-item .scan-icon svg { width: 19px; height: 19px; }
+  .scan-item .scan-mid { flex: 1; min-width: 0; }
+  .scan-item .scan-title { font-weight: 700; font-size: 14px; }
+  .scan-item .scan-time { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .scan-item .scan-amount { font-weight: 700; color: var(--success); font-size: 14.5px; white-space: nowrap; }
+
+  .req-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 10px; }
+  .req-top { display: flex; justify-content: space-between; align-items: center; }
+  .req-amount { font-weight: 700; font-size: 18px; }
+  .status-pill { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
+  .status-pill.pending { background: #fdf2d9; color: var(--pending); }
+  .status-pill.approved { background: var(--success-bg); color: var(--success); }
+  .status-pill.rejected { background: var(--error-bg); color: var(--error); }
+  .req-date { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+  .req-reason { font-size: 12.5px; color: var(--error); margin-top: 8px; }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-logo" id="topbarLogo" role="button" tabindex="0"><img class="brand-img" src="/assets/logo-horizontal.svg" alt="Mellow" style="height:30px;width:auto;display:block"><span class="role-tag">Distributor</span></div>
+    <button class="hamburger" id="hamburgerBtn" aria-label="Menu"><span></span><span></span><span></span></button>
+  </header>
+  <div class="nav-overlay" id="navOverlay"></div>
+
+  <div class="admin-shell">
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-logo" id="sidebarLogo" role="button" tabindex="0"><img class="brand-img" src="/assets/logo-horizontal.svg" alt="Mellow" style="height:34px;width:auto;display:block"><span class="role-tag">Distributor</span></div>
+      <button class="nav-link active" data-view="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>Dashboard</button>
+      <button class="nav-link" data-view="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M2.5 19.5a6.5 6.5 0 0113 0"/><circle cx="17.5" cy="9.5" r="2.5"/><path d="M15.5 13a5 5 0 016 5"/></svg>Users</button>
+      <button class="nav-link logout" id="logoutBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>Log Out</button>
+    </nav>
+
+    <main class="admin-content">
+
+      <!-- ============ DASHBOARD ============ -->
+      <section id="view-dashboard" class="view active">
+        <h1 class="view-title">Dashboard</h1>
+        <p class="view-sub">Overview of retailers you've referred to MelloW</p>
+        <div class="stat-grid">
+          <div class="stat-card accent hero">
+            <div class="label">Value Scanned By Your Referrals</div>
+            <div class="value" id="statScannedValue">--</div>
+          </div>
+          <div class="stat-card wide">
+            <div class="label">Retailers Registered Through You</div>
+            <div class="value" id="statReferredUsers">--</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ USERS ============ -->
+      <section id="view-users" class="view">
+        <h1 class="view-title">Users</h1>
+        <p class="view-sub">Retailers who registered with your phone number as their referring distributor.</p>
+        <input class="search-box" id="searchBox" placeholder="Search by name, shop, or email&hellip;">
+        <div id="usersList"></div>
+      </section>
+
+      <!-- ============ USER DETAIL ============ -->
+      <section id="view-user-detail" class="view">
+        <button class="user-detail-back" id="userDetailBackBtn" type="button">&larr; Back to Users</button>
+        <div id="userDetailContent" style="margin-top:18px;"><div class="empty">Loading&hellip;</div></div>
+      </section>
+
+    </main>
+  </div>
+
+<script>
+  // ---------- Nav open/close + scroll lock ----------
+  var hamburgerBtn = document.getElementById('hamburgerBtn');
+  var sidebar = document.getElementById('sidebar');
+  var navOverlay = document.getElementById('navOverlay');
+  function openNav() { sidebar.classList.add('open'); navOverlay.classList.add('open'); document.body.style.overflow = 'hidden'; }
+  function closeNav() { sidebar.classList.remove('open'); navOverlay.classList.remove('open'); document.body.style.overflow = ''; }
+  hamburgerBtn.addEventListener('click', function () {
+    if (sidebar.classList.contains('open')) closeNav(); else openNav();
+  });
+  navOverlay.addEventListener('click', closeNav);
+  document.getElementById('logoutBtn').addEventListener('click', function () {
+    localStorage.removeItem('mellow_dist_token');
+    localStorage.removeItem('mellow_dist');
+    window.location.href = '/dist-login';
+  });
+
+  var sidebarLogo = document.getElementById('sidebarLogo');
+  sidebarLogo.addEventListener('click', function () { switchView('dashboard'); });
+  sidebarLogo.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); switchView('dashboard'); }
+  });
+  var topbarLogo = document.getElementById('topbarLogo');
+  topbarLogo.addEventListener('click', function () { switchView('dashboard'); });
+  topbarLogo.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); switchView('dashboard'); }
+  });
+
+  var token = localStorage.getItem('mellow_dist_token');
+  if (!token) window.location.href = '/dist-login';
+
+  function authFetch(url, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({}, opts.headers, { Authorization: 'Bearer ' + token });
+    return fetch(url, opts).then(function (r) {
+      if (r.status === 401) { localStorage.removeItem('mellow_dist_token'); window.location.href = '/dist-login'; return Promise.reject(new Error('unauthorized')); }
+      return r;
+    });
+  }
+
+  function fmtDate(iso) {
+    var d = new Date(iso.replace(' ', 'T') + 'Z');
+    return d.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  // ---------- View switching ----------
+  var VIEWS = ['dashboard', 'users', 'user-detail'];
+  var loadedOnce = {};
+
+  function switchView(name, updateHash) {
+    if (VIEWS.indexOf(name) === -1) name = 'dashboard';
+    VIEWS.forEach(function (v) {
+      document.getElementById('view-' + v).classList.toggle('active', v === name);
+    });
+    var highlightName = name === 'user-detail' ? 'users' : name;
+    document.querySelectorAll('.nav-link[data-view]').forEach(function (el) {
+      el.classList.toggle('active', el.dataset.view === highlightName);
+    });
+    if (updateHash !== false) history.replaceState(null, '', '#' + name);
+    closeNav();
+
+    if (name === 'dashboard') loadStats();
+    if (name === 'users' && !loadedOnce.users) { loadUsers(); loadedOnce.users = true; }
+  }
+
+  document.querySelectorAll('[data-view]').forEach(function (el) {
+    if (el.id === 'sidebarLogo') return;
+    el.addEventListener('click', function () { switchView(el.dataset.view); });
+  });
+
+  // ---------- Dashboard ----------
+  function loadStats() {
+    authFetch('/api/distributor/stats')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        document.getElementById('statReferredUsers').textContent = data.referred_users;
+        document.getElementById('statScannedValue').textContent = '\u20a6 ' + data.scanned_value.toLocaleString();
+      })
+      .catch(function () {});
+  }
+
+  // ---------- Users ----------
+  var usersList = document.getElementById('usersList');
+  var searchBox = document.getElementById('searchBox');
+  var searchTimer;
+
+  function loadUsers() {
+    usersList.innerHTML = '<div class="empty">Loading&hellip;</div>';
+    authFetch('/api/distributor/users?search=' + encodeURIComponent(searchBox.value.trim()))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.users || data.users.length === 0) { usersList.innerHTML = '<div class="empty">No users found.</div>'; return; }
+        usersList.innerHTML = data.users.map(function (u) {
+          return '<div class="card user-card" data-user-id="' + u.id + '">' +
+              '<div class="card-top">' +
+                '<div><div class="name">' + u.full_name + '</div><div class="shop">' + u.shop_name + ' &middot; joined ' + fmtDate(u.created_at) + '</div></div>' +
+                '<div class="balance-tag">\u20a6 ' + u.balance.toLocaleString() + '</div>' +
+              '</div>' +
+            '</div>';
+        }).join('');
+        usersList.querySelectorAll('.user-card').forEach(function (el) {
+          el.addEventListener('click', function () { openUserDetail(el.dataset.userId); });
+        });
+      })
+      .catch(function () { usersList.innerHTML = '<div class="empty">Could not load users.</div>'; });
+  }
+
+  searchBox.addEventListener('input', function () { clearTimeout(searchTimer); searchTimer = setTimeout(loadUsers, 300); });
+
+  // ---------- User detail (profile + scan history + redemption history) ----------
+  document.getElementById('userDetailBackBtn').addEventListener('click', function () { switchView('users'); });
+
+  function openUserDetail(id) {
+    switchView('user-detail');
+    var content = document.getElementById('userDetailContent');
+    content.innerHTML = '<div class="empty">Loading&hellip;</div>';
+    authFetch('/api/distributor/users/' + id + '/full')
+      .then(function (r) { return r.json(); })
+      .then(function (data) { renderUserDetail(content, data); })
+      .catch(function () { content.innerHTML = '<div class="empty">Could not load this retailer\u2019s details.</div>'; });
+  }
+
+  function renderUserDetail(content, data) {
+    var u = data.user;
+
+    var docsHtml = '<div class="empty" style="padding:16px 0;">Verification not yet submitted.</div>';
+    var verifyStatus = '<span class="unverified-tag">Not yet submitted</span>';
+    if (u.tier2_submitted_at && !u.tier2_verified_at) {
+      verifyStatus = '<span class="unverified-tag">Submitted - awaiting admin review</span>';
+    } else if (u.tier2_verified_at) {
+      verifyStatus = '<span class="verified-tag">&#10003; Verified by Admin</span>';
+    }
+    if (u.tier2_submitted_at) {
+      docsHtml =
+        '<div class="account-row"><div class="k">Bank</div><div class="v">' + (u.bank_name || '\u2014') + '</div></div>' +
+        '<div class="account-row"><div class="k">Account</div><div class="v">' + (u.account_number || '\u2014') + ' (' + (u.account_name || '\u2014') + ')</div></div>' +
+        '<div class="account-row"><div class="k">Submitted On</div><div class="v">' + fmtDate(u.tier2_submitted_at) + '</div></div>' +
+        (u.tier2_verified_at ? '<div class="account-row"><div class="k">Verified On</div><div class="v">' + fmtDate(u.tier2_verified_at) + '</div></div>' : '') +
+        '<div class="docs-row">' +
+          (u.id_document_url ? '<a class="doc-link" href="' + u.id_document_url + '" target="_blank" rel="noopener">View ID Document</a>' : '') +
+          (u.shop_photo_url ? '<a class="doc-link" href="' + u.shop_photo_url + '" target="_blank" rel="noopener">View Shop Photo</a>' : '') +
+        '</div>';
+    }
+
+    var scansHtml = '<div class="empty">No scans yet.</div>';
+    if (data.scans && data.scans.length > 0) {
+      scansHtml = data.scans.map(function (s) {
+        return '<div class="scan-item">' +
+          '<div class="scan-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></div>' +
+          '<div class="scan-mid"><div class="scan-title">QR Code Scanned</div><div class="scan-time">' + fmtDate(s.used_at) + '</div></div>' +
+          '<div class="scan-amount">+\u20a6 ' + s.value.toLocaleString() + '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    var redemptionsHtml = '<div class="empty">No redemption requests yet.</div>';
+    if (data.redemptions && data.redemptions.length > 0) {
+      redemptionsHtml = data.redemptions.map(function (r) {
+        var reason = r.status === 'rejected' && r.rejection_reason ? '<div class="req-reason">Reason: ' + r.rejection_reason + '</div>' : '';
+        return '<div class="req-card"><div class="req-top"><div class="req-amount">\u20a6 ' + r.amount.toLocaleString() +
+          '</div><div class="status-pill ' + r.status + '">' + r.status + '</div></div><div class="req-date">Requested ' +
+          fmtDate(r.created_at) + '</div>' + reason + '</div>';
+      }).join('');
+    }
+
+    content.innerHTML =
+      '<div class="ud-hero">' +
+        '<div><div class="name">' + u.full_name + '</div><div class="shop">' + u.shop_name + '</div></div>' +
+        '<div class="balance">\u20a6 ' + u.balance.toLocaleString() + '</div>' +
+      '</div>' +
+
+      '<div class="account-card">' +
+        '<div class="group-title">Personal</div>' +
+        '<div class="account-row"><div class="k">Phone (WhatsApp)</div><div class="v">' + u.phone_number + '</div></div>' +
+        '<div class="account-row"><div class="k">Email</div><div class="v">' + u.email + '</div></div>' +
+      '</div>' +
+
+      '<div class="account-card">' +
+        '<div class="group-title">Shop</div>' +
+        '<div class="account-row"><div class="k">Retailer Type</div><div class="v">' + u.retailer_type + '</div></div>' +
+        '<div class="account-row"><div class="k">Location</div><div class="v">' + u.shop_city + ', ' + u.shop_state + '</div></div>' +
+        '<div class="account-row"><div class="k">Address</div><div class="v">' + (u.shop_address || '\u2014') + '</div></div>' +
+        '<div class="account-row"><div class="k">Registered</div><div class="v">' + fmtDate(u.created_at) + '</div></div>' +
+      '</div>' +
+
+      '<div class="account-card">' +
+        '<div class="group-title">Verification &amp; Payout</div>' +
+        '<div class="account-row"><div class="k">Status</div><div class="v">' + verifyStatus + '</div></div>' +
+        docsHtml +
+      '</div>' +
+
+      '<div class="section-title"><h2>Scan History</h2></div>' +
+      scansHtml +
+
+      '<div class="section-title"><h2>Redemption History</h2></div>' +
+      redemptionsHtml;
+  }
+
+  // ---------- Init ----------
+  var initialView = (location.hash || '').replace('#', '') || 'dashboard';
+  switchView(initialView, false);
+</script>
+</body>
+</html>

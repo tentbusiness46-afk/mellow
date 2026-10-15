@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mellow</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
+<link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon.png">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#E3161C">
+<style>@font-face{font-family:Inter;font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-latin-ext.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}@font-face{font-family:Inter;font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-latin.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+  /* ---------- Logo animation: letters appear one by one (same on the website) ---------- */
+  .clogo { display: block; overflow: visible; }
+  .clogo .mk, .clogo .lt { opacity: 0; transform-box: fill-box; transform-origin: 50% 100%; animation: lg .5s cubic-bezier(.22,.8,.24,1) both; }
+  .clogo .mk { animation-delay: .1s; }
+  .clogo .lt { animation-delay: calc(.3s + var(--i) * .13s); }
+  @keyframes lg { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .clogo .mk, .clogo .lt { animation: none; opacity: 1; } }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script>
+  (function () {
+    if (!localStorage.getItem('mellow_token')) window.location.href = '/app';
+  })();
+</script>
+<style>
+  :root {
+    --maroon: #111111; --red: #E3161C; --red-bright: #c4121a; --gold: #c9a24b;
+    --bg: #F4F4F2; --surface: #ffffff; --border: #E8E8E6; --text: #111111; --text-muted: #6e6e6a;
+    --error: #E3161C; --error-bg: #fdecec; --success: #1f8a4c; --success-bg: #eaf7ee; --pending: #b8860b;
+    --shadow: 0 10px 30px rgba(17, 17, 17, 0.06);
+  }
+  * { box-sizing: border-box; }
+  html { overflow-y: scroll; }
+  body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .page-content { max-width: 480px; margin: 0 auto; padding: 20px 16px 110px; width: 100%; min-height: 100vh; }
+
+  /* ---------- Desktop sidebar (hidden on mobile) ---------- */
+  .side-nav { display: none; }
+  .app-shell { display: block; }
+
+  @media (min-width: 768px) {
+    .tab-bar { display: none; }
+    .app-shell { display: flex; }
+    .side-nav {
+      display: flex; flex-direction: column; gap: 4px; position: sticky; top: 0; height: 100vh; width: 250px;
+      background: var(--surface); border-right: 1px solid var(--border); padding: 24px 16px; flex-shrink: 0;
+    }
+    .side-nav-logo { margin-bottom: 26px; padding: 0 8px; cursor: pointer; }
+    .side-nav .nav-link {
+      display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; text-decoration: none;
+      color: var(--text); font-weight: 600; font-size: 14.5px; border: none; background: none; text-align: left;
+      width: 100%; cursor: pointer; font-family: inherit;
+    }
+    .side-nav .nav-link svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .side-nav .nav-link:hover, .side-nav .nav-link.active { background: rgba(227,22,28,0.08); color: var(--red); }
+    .side-nav .nav-link.logout { margin-top: auto; color: var(--error); }
+    .page-content { flex: 1; min-width: 0; padding: 36px 40px; }
+  }
+
+  /* ---------- View switching ---------- */
+  .view { display: none; }
+  .view.active { display: block; }
+  h1.view-title { font-weight: 800; font-size: 21px; margin: 4px 0 18px; }
+
+  /* ---------- Home view ---------- */
+  .home-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .greet-label { font-size: 12.5px; color: var(--text-muted); letter-spacing: 0.5px; text-transform: uppercase; }
+  .greet-name { font-weight: 800; font-size: 21px; margin-top: 2px; }
+  .avatar {
+    width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #E3161C, #b8101a);
+    color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .balance-card {
+    background: linear-gradient(135deg, #E3161C, #b8101a);
+    color: #fff; border-radius: 20px; padding: 26px 22px; box-shadow: var(--shadow); position: relative; overflow: hidden;
+  }
+  .balance-card .label { font-size: 13px; opacity: 0.85; letter-spacing: 0.5px; }
+  .balance-card .amount { font-weight: 800; font-size: 38px; margin: 8px 0 4px; }
+  .balance-card .shop { font-size: 13px; opacity: 0.85; }
+  .skeleton { opacity: 0.5; }
+
+  .section-title { display: flex; align-items: center; justify-content: space-between; margin: 26px 0 12px; }
+  .section-title h2 { font-weight: 700; font-size: 16px; margin: 0; }
+
+  .scan-item {
+    display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 13px 15px; margin-bottom: 10px;
+  }
+  .scan-item .scan-icon {
+    width: 38px; height: 38px; border-radius: 10px; background: var(--success-bg); color: var(--success);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .scan-item .scan-icon svg { width: 19px; height: 19px; }
+  .scan-item .scan-mid { flex: 1; min-width: 0; }
+  .scan-item .scan-title { font-weight: 700; font-size: 14px; }
+  .scan-item .scan-time { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .scan-item .scan-amount { font-weight: 700; color: var(--success); font-size: 14.5px; white-space: nowrap; }
+
+  .empty { text-align: center; color: var(--text-muted); font-size: 13.5px; padding: 36px 20px; }
+
+  /* ---------- Redeem view ---------- */
+  .available { color: var(--text-muted); font-size: 13.5px; margin: 0 0 22px; }
+  .available b { color: var(--red); }
+  .file-input { border: 1.5px dashed var(--border); border-radius: 12px; padding: 18px; text-align: center; cursor: pointer; background: var(--surface); font-size: 13.5px; color: var(--text-muted); display: block; }
+  .file-input.has-file { border-color: var(--success); color: var(--success); border-style: solid; }
+  .file-input input { display: none; }
+  .checkbox-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 20px; }
+  .checkbox-row input { width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; }
+  .checkbox-row label { margin: 0; font-weight: 400; font-size: 13px; color: var(--text-muted); }
+  .tier2-block { border-top: 1px solid var(--border); margin-top: 26px; padding-top: 20px; }
+  .tier2-block .title { font-weight: 700; font-size: 16px; margin: 0 0 4px; }
+  .tier2-block .desc { font-size: 12.5px; color: var(--text-muted); margin: 0 0 4px; line-height: 1.5; }
+
+  .req-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 10px; }
+  .req-top { display: flex; justify-content: space-between; align-items: center; }
+  .req-amount { font-weight: 700; font-size: 18px; }
+  .req-status { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .req-status.pending { background: #fdf2d9; color: var(--pending); }
+  .req-status.approved { background: var(--success-bg); color: var(--success); }
+  .req-status.rejected { background: var(--error-bg); color: var(--error); }
+  .req-date { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+  .req-reason { font-size: 12.5px; color: var(--error); margin-top: 8px; }
+
+  /* ---------- Account view ---------- */
+  .account-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 6px 0; margin-bottom: 16px; }
+  .account-card .group-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 14px 16px 6px; }
+  .account-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-top: 1px solid var(--border); gap: 16px; }
+  .account-card .group-title + .account-row { border-top: none; }
+  .account-row .k { font-size: 13px; color: var(--text-muted); flex-shrink: 0; }
+  .account-row .v { font-size: 13.5px; font-weight: 600; text-align: right; }
+  .verified-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; color: var(--success); }
+  .unverified-tag { font-size: 11.5px; font-weight: 700; color: var(--pending); }
+
+  /* ---------- Settings view ---------- */
+  .setting-row { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+  .setting-row .label { font-weight: 600; font-size: 14.5px; }
+  .setting-row .sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .switch { position: relative; width: 46px; height: 26px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; inset: 0; background: var(--border); border-radius: 26px; cursor: pointer; transition: 0.2s; }
+  .slider::before { content: ""; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+  input:checked + .slider { background: var(--red); }
+  input:checked + .slider::before { transform: translateX(20px); }
+  .logout-btn-full { width: 100%; margin-top: 8px; padding: 14px; border: 1px solid var(--error); border-radius: 10px; background: transparent; color: var(--error); font-size: 14.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
+
+  /* ---------- Scan view (opened via center FAB) ---------- */
+  #view-scan { position: fixed; inset: 0; z-index: 80; background: var(--bg); padding: 0; overflow-y: auto; }
+  .scan-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 16px; max-width: 480px; margin: 0 auto; }
+  .scan-header h1 { margin: 0; }
+  .scan-close { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .scan-body { max-width: 480px; margin: 0 auto; padding: 0 16px 40px; }
+  .scan-balance-bar {
+    background: linear-gradient(135deg, #E3161C, #b8101a); color: #fff; border-radius: 16px;
+    padding: 14px 18px; margin-bottom: 16px; box-shadow: var(--shadow);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .scan-balance-label { font-size: 12px; opacity: 0.85; letter-spacing: 0.5px; }
+  .scan-balance-amount { font-weight: 800; font-size: 22px; transition: transform 0.25s ease; }
+  .scan-balance-amount.bump { animation: scanBalanceBump 0.5s ease; }
+  @keyframes scanBalanceBump {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.18); color: var(--gold); }
+    100% { transform: scale(1); }
+  }
+  .coin {
+    position: fixed; width: 22px; height: 22px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #f0d488, var(--gold) 60%, #a67c2e);
+    color: #5c4416; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+    z-index: 999; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+    transition: transform 0.75s cubic-bezier(.25,.7,.3,1), opacity 0.75s ease;
+  }
+  .scanner-frame { position: relative; border-radius: 18px; overflow: hidden; background: #000; aspect-ratio: 1 / 1; box-shadow: var(--shadow); }
+  .scanner-frame video { width: 100%; height: 100%; object-fit: cover; }
+  .scan-box { position: absolute; top: 15%; left: 15%; right: 15%; bottom: 15%; border: 3px solid var(--gold); border-radius: 16px; pointer-events: none; }
+  .camera-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; text-align: center; padding: 24px; font-size: 14px; background: rgba(0,0,0,0.5); }
+  .result-banner { margin-top: 18px; border-radius: 14px; padding: 16px; font-size: 14px; font-weight: 600; display: none; }
+  .result-banner.success { background: var(--success-bg); color: var(--success); display: block; }
+  .result-banner.error { background: var(--error-bg); color: var(--error); display: block; }
+  .manual-entry { margin-top: 24px; }
+  .manual-entry summary { cursor: pointer; font-size: 13.5px; color: var(--text-muted); font-weight: 600; }
+  .manual-entry .row { display: flex; gap: 10px; margin-top: 12px; }
+  .manual-entry input { flex: 1; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 15px; font-family: inherit; text-transform: uppercase; }
+  .manual-entry button { padding: 12px 18px; border: none; border-radius: 10px; background: var(--red); color: #fff; font-weight: 700; cursor: pointer; }
+
+  /* ---------- Shared form styles ---------- */
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; margin-top: 18px; }
+  input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 15px; font-family: inherit; }
+  input:focus { outline: none; border-color: var(--red); }
+  input.input-error { border-color: var(--error); background: var(--error-bg); }
+  .field-error { display: none; color: var(--error); font-size: 12.5px; margin-top: 6px; }
+  .form-error { display: none; background: var(--error-bg); color: var(--error); border: 1px solid var(--error); padding: 10px 12px; border-radius: 10px; font-size: 13.5px; margin-top: 18px; }
+  .form-success { display: none; background: var(--success-bg); color: var(--success); border: 1px solid var(--success); padding: 10px 12px; border-radius: 10px; font-size: 13.5px; margin-top: 18px; }
+  button[type="submit"] { width: 100%; margin-top: 26px; padding: 14px; border: none; border-radius: 10px; background: var(--red); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  button[type="submit"]:disabled { opacity: 0.6; cursor: default; }
+
+  /* ---------- Bottom tab bar ---------- */
+  .tab-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 70;
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+  }
+  .tab-bar-inner { max-width: 480px; margin: 0 auto; display: flex; align-items: flex-end; justify-content: space-between; }
+  .tab-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px;
+    border: none; background: none; color: var(--text-muted); font-family: inherit; font-size: 11px; font-weight: 600; cursor: pointer;
+  }
+  .tab-btn svg { width: 22px; height: 22px; }
+  .tab-btn.active { color: var(--red); }
+  .tab-scan-btn { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; margin: 0 4px; }
+  .tab-scan-btn button {
+    width: 56px; height: 56px; border-radius: 50%; border: none; background: var(--red); color: #fff;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    box-shadow: 0 8px 20px rgba(179,32,47,0.4); margin-top: -26px; border: 4px solid var(--bg);
+  }
+  .tab-scan-btn svg { width: 24px; height: 24px; }
+  /* ---------- First-launch intro animation ---------- */
+  .intro-screen {
+    position: fixed; inset: 0; z-index: 200; background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.6s ease;
+  }
+  .intro-screen.hide { opacity: 0; pointer-events: none; }
+  .intro-logo { width: min(60vw, 300px); }
+  .intro-logo .clogo { width: 100%; height: auto; }
+</style>
+</head>
+<body>
+
+  <div class="intro-screen" id="introScreen">
+    <div class="intro-logo"><svg class="clogo" viewBox="0 0 360 123.65" role="img" aria-label="Mellow"><g class="mk"><polygon fill="#E3161C" fill-rule="evenodd" points="18.23 118.86 26.55 123.57 59.79 96.09 93.05 123.65 101.37 118.94 101.37 65.78 93.05 65.78 93.05 112.9 63.89 88.78 59.79 88.78 55.7 88.78 26.55 112.88 26.55 65.73 18.23 65.73 18.23 118.86"/><polygon fill="#231f20" fill-rule="evenodd" points="84.73 61.96 84.73 90.36 76.43 83.38 76.43 67.96 62.11 79.96 57.49 79.96 43.17 67.94 43.17 83.38 34.85 90.36 34.85 61.96 43.17 57.07 59.79 71.03 59.79 71.05 76.46 57.09 84.73 61.96"/><path fill="#fff100" fill-rule="evenodd" d="M0,22.25c6.28,7.82,12.26,15.97,17.14,25.33,25.27-6.15,53.04-5.09,82.21,0,4.18-12.31,12.09-20.74,20.27-28.88-21.48,16.6-29.39,12.49-24.19-11.64C79.18,30.33,66.08,30.91,57.36,0c-9.03,30.68-21.9,31.22-37.93,6.93C23.08,28.24,17.41,34.64,0,22.25"/></g><g transform="translate(0 28.54)"><path class="lt" style="--i:0" fill="#231f20" d="M139.17,41.47c4.22.08,10.72.22,15.89.22,0,1.17.58,3.13.87,4.6,1.97,7.29,5.61,20.49,6.49,23.18.14.08.22.08.36,0,2.4-3.79,10.36-17.35,13.13-22.97.87-1.68,1.75-3.43,2.18-4.81,5.17.08,10.42-.22,15.02-.22.14.22.08,2.12-.22,2.48-1.82.29-2.91.51-4.01.8-1.6.44-1.97,1.75-2.26,3.65-.58,5.25-2.12,24.86-2.34,30.05,0,1.9.22,3.5,1.82,4.01,1.02.36,2.55.66,4.22.95.14.44,0,2.12-.44,2.48-2.7,0-7-.22-11.67-.22-5.11,0-9.04.22-10.5.22-.29-.51-.14-2.18.14-2.48,1.9-.36,2.63-.51,3.72-.8,1.31-.36,1.9-1.24,2.34-4.23.73-5.69,2.48-20.35,2.91-26.76,0-.08-.22,0-.36.08-3.94,7.43-15.53,28.15-18.23,33.84-.58.22-2.7.36-3.13,0-1.6-7.73-5.33-25.96-7.22-33.18-.08-.08-.22,0-.29.08-1.97,7.73-4.96,20.27-5.83,25.45-.51,2.62.22,4.16,1.9,4.6,1.39.44,2.91.73,4.3.95.22.36,0,2.26-.36,2.55-1.53,0-5.33-.29-10.21-.29-2.7,0-6.64.29-8.24.29-.22-.58-.08-2.18.29-2.48,1.82-.22,2.91-.51,3.94-.87,1.9-.58,2.7-1.75,3.79-4.6,1.9-5.69,7-25.38,7.95-29.6.29-1.17.14-2.84-1.68-3.5-1.31-.36-2.99-.58-4.89-.95-.14-.51.29-2.34.58-2.48h0l.04-.04Z"/><path class="lt" style="--i:1" fill="#E3161C" d="M219.02,60.59c0,3.21-2.34,5.76-6.49,8.1-2.77,1.6-6.28,2.91-8.54,3.72-.22.08-.44.29-.44.44-.08.44-.08.58-.08.81,0,3.65,1.17,7,5.17,7,2.4,0,5.11-.58,9.11-4.45.08,0,.29.22.29.36,0,.51-.08,2.04-.44,2.63-2.85,4.16-9.41,7.65-14.73,7.65-6.85,0-8.16-5.76-8.16-10.5,0-7.15,3.13-13.2,6.28-15.97,2.48-2.26,8.82-5.03,12.62-5.03,3.57,0,5.39,2.34,5.39,5.25h.02ZM203.63,69.11c0,.22.14.44.29.36,1.97-.51,4.3-1.39,5.61-2.55,1.09-.87,1.82-2.55,1.82-4.67,0-2.34-1.17-3.57-2.41-3.57-1.97,0-4.52,3.07-5.33,10.42h.02Z"/><path class="lt" style="--i:2" fill="#E3161C" d="M225.43,41.69c3.94-2.4,10.58-4.89,12.76-4.89,1.02.08,1.24,1.82.58,4.96-1.75,10.06-6.06,31.28-6.34,35.74-.14,1.17,0,2.04.87,2.04.73,0,1.97-.58,4.3-2.63.08,0,.29.29.29.58s-.14,1.82-.51,2.34c-3.28,3.86-8.75,7-11.96,7-2.18,0-2.7-2.91-2.12-7.29.95-7.07,5.33-27.71,6.2-34.63.08-.81-.14-1.53-.73-1.53-.8,0-2.34.22-3.86.81-.14-.36.22-2.34.51-2.48h0v-.02Z"/><path class="lt" style="--i:3" fill="#E3161C" d="M244.24,41.69c3.94-2.4,10.58-4.89,12.76-4.89,1.02.08,1.24,1.82.58,4.96-1.75,10.06-6.06,31.28-6.34,35.74-.14,1.17,0,2.04.87,2.04.73,0,1.97-.58,4.3-2.63.08,0,.29.29.29.58s-.14,1.82-.51,2.34c-3.28,3.86-8.75,7-11.96,7-2.18,0-2.7-2.91-2.12-7.29.95-7.07,5.33-27.71,6.2-34.63.08-.81-.14-1.53-.73-1.53-.8,0-2.34.22-3.86.81-.14-.36.22-2.34.51-2.48h0v-.02Z"/><path class="lt" style="--i:4" fill="#E3161C" d="M289.16,65.84c0,7.87-3.28,14.66-10.14,18.38-2.48,1.24-6.78,2.62-9.92,2.62-5.98,0-8.82-4.3-8.82-10.79s2.4-13.2,7.73-16.78c3.5-2.4,8.1-3.94,11.81-3.94,6.49,0,9.33,4.67,9.33,10.5h.01ZM273.56,83.19c4.38,0,6.34-9.04,6.34-16.04,0-4.01-.58-8.54-4.08-8.54-3.86-.08-6.42,8.24-6.42,15.97,0,5.98,1.46,8.6,4.16,8.6h0Z"/><path class="lt" style="--i:5" fill="#231f20" d="M294.85,41.41c1.53,0,4.74.29,9.99.29,4.81,0,8.68-.29,10.64-.29.22.29.08,2.18-.29,2.48-1.6.36-2.85.66-3.72,1.03-.66.36-.81,1.09-.87,2.18.29,5.25,1.24,19.25,1.75,24.13.08.08.22.08.29.08,4.38-8.16,10.64-21.08,13.41-27.56.51.08,1.46.14,2.85.14,1.6,0,2.4-.08,2.91-.08.58,6.06,3.5,24.72,4.3,29.02,0,.08.22.08.29,0,3.57-6.93,8.97-18.74,10.94-23.63.73-2.04,1.17-3.72-.81-4.3-1.09-.44-2.62-.73-4.38-1.03-.29-.51-.08-2.26.36-2.48,1.75,0,5.33.29,9.04.29,3.13,0,6.42-.29,8.32-.29.22.22.14,2.26-.29,2.55-1.31.22-2.34.44-3.43.8-1.97.66-3.07,2.04-4.38,4.52-4.96,9.33-15.1,30.33-18.01,36.97-.73-.08-1.97-.14-2.91-.14-1.24,0-2.63.08-3.13.14-.81-6.56-3.43-24.29-4.23-28.44h-.29c-3.35,6.49-10.86,21.36-14.22,28.44-.51-.08-1.53-.14-2.91-.14-1.17,0-2.63.08-3.07.14-.58-8.9-1.9-29.54-2.7-36.89-.29-1.9-.44-4.01-1.97-4.52-1.03-.44-2.63-.66-3.94-.95-.14-.58,0-2.26.44-2.48h.03v.02Z"/></g></svg></div>
+  </div>
+
+  <div class="app-shell">
+    <nav class="side-nav" id="sideNav">
+      <div class="side-nav-logo" id="sideNavLogo" role="button" tabindex="0"><img class="brand-img" src="/assets/logo-horizontal.svg" alt="Mellow" style="height:34px;width:auto;display:block"></div>
+      <button class="nav-link active" data-view="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>Home</button>
+      <button class="nav-link" data-view="scan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 012-2h2"/><path d="M4 16v2a2 2 0 002 2h2"/><path d="M20 8V6a2 2 0 00-2-2h-2"/><path d="M20 16v2a2 2 0 01-2 2h-2"/><circle cx="12" cy="12" r="3.5"/></svg>Scan QR</button>
+      <button class="nav-link" data-view="redeem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1"/></svg>Redeem</button>
+      <button class="nav-link" data-view="account"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0115 0"/></svg>Account</button>
+      <button class="nav-link" data-view="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Settings</button>
+      <button class="nav-link logout" id="sideLogoutBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>Log Out</button>
+    </nav>
+
+  <main class="page-content">
+
+    <!-- ============ HOME ============ -->
+    <section id="view-home" class="view active">
+      <div class="home-header">
+        <div>
+          <div class="greet-label">Hello</div>
+          <div class="greet-name" id="greetName">&nbsp;</div>
+        </div>
+        <div class="avatar" id="avatarInitials" role="button" tabindex="0">&nbsp;</div>
+      </div>
+
+      <div class="balance-card">
+        <div class="label">Your Balance</div>
+        <div class="amount skeleton" id="balanceAmount">&#8358; --</div>
+        <div class="shop" id="shopName">&nbsp;</div>
+      </div>
+
+      <div class="section-title"><h2>Scan History</h2></div>
+      <div id="scanHistoryList"><div class="empty">Loading&hellip;</div></div>
+    </section>
+
+    <!-- ============ REDEEM ============ -->
+    <section id="view-redeem" class="view">
+      <h1 class="view-title">Redeem Balance</h1>
+      <p class="available">Available to redeem: <b id="availableAmount">&#8358; --</b></p>
+      <div id="redeemFormError" class="form-error"></div>
+      <div id="redeemFormSuccess" class="form-success"></div>
+      <form id="redeemForm" novalidate>
+        <label for="amount">Amount to Redeem (&#8358;)</label>
+        <input id="amount" name="amount" type="number" min="1" placeholder="e.g. 5000">
+        <div class="field-error" data-error-for="amount"></div>
+
+        <div id="tier2Section" class="tier2-block" style="display:none;">
+          <p class="title">One-Time Verification</p>
+          <p class="desc">Since this is your first redemption, we need a few more details. This is only required once.</p>
+
+          <label>Government ID (NIN slip, voter's card, or driver's license)</label>
+          <label class="file-input" id="idFileLabel">
+            <span id="idFileText">Tap to upload a photo of your ID</span>
+            <input type="file" id="id_document" name="id_document" accept="image/*,.pdf" capture="environment">
+          </label>
+          <div class="field-error" data-error-for="id_document"></div>
+
+          <label>Shop / Storefront Photo</label>
+          <label class="file-input" id="shopFileLabel">
+            <span id="shopFileText">Tap to upload a photo of your shop</span>
+            <input type="file" id="shop_photo" name="shop_photo" accept="image/*" capture="environment">
+          </label>
+          <div class="field-error" data-error-for="shop_photo"></div>
+
+          <label for="bank_name">Bank Name</label>
+          <input id="bank_name" name="bank_name" placeholder="e.g. GTBank">
+          <div class="field-error" data-error-for="bank_name"></div>
+
+          <label for="account_number">Account Number</label>
+          <input id="account_number" name="account_number" placeholder="10-digit account number" maxlength="10">
+          <div class="field-error" data-error-for="account_number"></div>
+
+          <label for="account_name">Account Name</label>
+          <input id="account_name" name="account_name" placeholder="Name on the account">
+          <div class="field-error" data-error-for="account_name"></div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="consent" name="consent">
+            <label for="consent">I consent to MelloW storing my ID and payout details for verification purposes, in line with the <a href="#" style="color:var(--red);">privacy &amp; terms</a>.</label>
+          </div>
+          <div class="field-error" data-error-for="consent"></div>
+        </div>
+
+        <button type="submit" id="redeemSubmitBtn">Submit Request</button>
+      </form>
+
+      <div class="section-title"><h2>Past Requests</h2></div>
+      <div id="redeemHistoryList"><div class="empty">Loading&hellip;</div></div>
+    </section>
+
+    <!-- ============ ACCOUNT ============ -->
+    <section id="view-account" class="view">
+      <h1 class="view-title">Account</h1>
+
+      <div class="account-card">
+        <div class="group-title">Personal</div>
+        <div class="account-row"><div class="k">Full Name</div><div class="v" id="accFullName">&mdash;</div></div>
+        <div class="account-row"><div class="k">Phone (WhatsApp)</div><div class="v" id="accPhone">&mdash;</div></div>
+        <div class="account-row"><div class="k">Email</div><div class="v" id="accEmail">&mdash;</div></div>
+      </div>
+
+      <div class="account-card">
+        <div class="group-title">Shop</div>
+        <div class="account-row"><div class="k">Shop Name</div><div class="v" id="accShopName">&mdash;</div></div>
+        <div class="account-row"><div class="k">Retailer Type</div><div class="v" id="accRetailerType">&mdash;</div></div>
+        <div class="account-row"><div class="k">Location</div><div class="v" id="accLocation">&mdash;</div></div>
+        <div class="account-row"><div class="k">Address</div><div class="v" id="accAddress">&mdash;</div></div>
+        <div class="account-row"><div class="k">Stocking Mellow?</div><div class="v" id="accStocking">&mdash;</div></div>
+        <div class="account-row"><div class="k">Heard Via</div><div class="v" id="accReferral">&mdash;</div></div>
+      </div>
+
+      <div class="account-card">
+        <div class="group-title">Referral Distributor</div>
+        <div class="account-row"><div class="k">Name</div><div class="v" id="accDistName">&mdash;</div></div>
+        <div class="account-row"><div class="k">Phone</div><div class="v" id="accDistPhone">&mdash;</div></div>
+        <div class="account-row"><div class="k">Place</div><div class="v" id="accDistPlace">&mdash;</div></div>
+      </div>
+
+      <div class="account-card">
+        <div class="group-title">Verification &amp; Payout</div>
+        <div class="account-row"><div class="k">Status</div><div class="v" id="accTier2Status">&mdash;</div></div>
+        <div class="account-row" id="accBankRow" style="display:none;"><div class="k">Bank</div><div class="v" id="accBank">&mdash;</div></div>
+        <div class="account-row" id="accAcctRow" style="display:none;"><div class="k">Account</div><div class="v" id="accAcct">&mdash;</div></div>
+      </div>
+
+      <div class="account-card">
+        <div class="group-title">Member Since</div>
+        <div class="account-row"><div class="k">Registered</div><div class="v" id="accCreated">&mdash;</div></div>
+      </div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section id="view-settings" class="view">
+      <h1 class="view-title">Settings</h1>
+      <button class="logout-btn-full" id="logoutBtn">Log Out</button>
+    </section>
+
+    <!-- ============ SCAN (full-screen, opened via center FAB) ============ -->
+    <section id="view-scan" class="view">
+      <div class="scan-header">
+        <h1 class="view-title" style="margin:0;">Scan QR Code</h1>
+        <button class="scan-close" id="scanCloseBtn" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="scan-body">
+        <div class="scan-balance-bar">
+          <div class="scan-balance-label">Current Balance</div>
+          <div class="scan-balance-amount" id="scanBalanceAmount">&#8358; --</div>
+        </div>
+        <div class="scanner-frame" id="scannerFrame">
+          <video id="video" playsinline muted></video>
+          <div class="scan-box"></div>
+          <div class="camera-msg" id="cameraMsg">Requesting camera access&hellip;</div>
+        </div>
+        <canvas id="canvas" style="display:none;"></canvas>
+        <div id="resultBanner" class="result-banner"></div>
+        <details class="manual-entry">
+          <summary>Enter a code manually instead</summary>
+          <div class="row">
+            <input id="manualCode" placeholder="e.g. 7F3K9...">
+            <button type="button" id="manualSubmit">Redeem</button>
+          </div>
+        </details>
+      </div>
+    </section>
+
+  </main>
+  </div>
+
+  <!-- ============ BOTTOM TAB BAR (mobile only) ============ -->
+  <nav class="tab-bar">
+    <div class="tab-bar-inner">
+      <button class="tab-btn active" data-view="home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+        Home
+      </button>
+      <button class="tab-btn" data-view="redeem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1"/></svg>
+        Redeem
+      </button>
+      <div class="tab-scan-btn">
+        <button id="scanFabBtn" aria-label="Scan QR Code">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 012-2h2"/><path d="M4 16v2a2 2 0 002 2h2"/><path d="M20 8V6a2 2 0 00-2-2h-2"/><path d="M20 16v2a2 2 0 01-2 2h-2"/><circle cx="12" cy="12" r="3.5"/></svg>
+        </button>
+      </div>
+      <button class="tab-btn" data-view="account">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0115 0"/></svg>
+        Account
+      </button>
+      <button class="tab-btn" data-view="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </button>
+    </div>
+  </nav>
+
+<script>
+  var token = localStorage.getItem('mellow_token');
+  if (!token) window.location.href = '/app';
+
+  // ---------- First-launch intro animation ----------
+  // Only plays once ever, on the first time this device opens the app -
+  // gated by a localStorage flag so reloads/revisits skip straight in.
+  (function () {
+    var introScreen = document.getElementById('introScreen');
+    if (sessionStorage.getItem('mellow_intro_shown')) {
+      introScreen.style.display = 'none';
+      return;
+    }
+    sessionStorage.setItem('mellow_intro_shown', '1');
+    setTimeout(function () {
+      introScreen.classList.add('hide');
+      setTimeout(function () { introScreen.style.display = 'none'; }, 650);
+    }, 1900);
+  })();
+
+  function doLogout() {
+    localStorage.removeItem('mellow_token');
+    localStorage.removeItem('mellow_user');
+    window.location.href = '/app';
+  }
+  document.getElementById('logoutBtn').addEventListener('click', doLogout);
+
+  // ---------- Shared form helpers ----------
+  function showError(name, message) {
+    var errorEl = document.querySelector('[data-error-for="' + name + '"]');
+    var inputEl = document.querySelector('[name="' + name + '"]');
+    if (errorEl) { errorEl.textContent = message; errorEl.style.display = 'block'; }
+    if (inputEl) inputEl.classList.add('input-error');
+  }
+  function clearErrors(form) {
+    form.querySelectorAll('.field-error').forEach(function (el) { el.style.display = 'none'; el.textContent = ''; });
+    form.querySelectorAll('.input-error').forEach(function (el) { el.classList.remove('input-error'); });
+  }
+  function enableFormKeyNav(form, skipSelector) {
+    form.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      if (e.target.tagName === 'TEXTAREA' && !e.ctrlKey) return;
+      e.preventDefault();
+      if (e.ctrlKey) { form.requestSubmit(); return; }
+      var focusable = Array.from(form.querySelectorAll(skipSelector || 'input, select, textarea'))
+        .filter(function (el) { return !el.disabled && el.offsetParent !== null; });
+      var idx = focusable.indexOf(e.target);
+      if (idx > -1 && idx < focusable.length - 1) focusable[idx + 1].focus();
+      else form.requestSubmit();
+    });
+  }
+  function fmtDateTime(iso) {
+    var d = new Date(iso.replace(' ', 'T') + 'Z');
+    return d.toLocaleDateString('en-NG', { day: 'numeric', month: 'short' }) + ' \u00b7 ' +
+      d.toLocaleTimeString('en-NG', { hour: 'numeric', minute: '2-digit' });
+  }
+  function fmtDate(iso) {
+    var d = new Date(iso.replace(' ', 'T') + 'Z');
+    return d.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  // ---------- Tab / view switching ----------
+  var lastTab = 'home';
+
+  function switchView(name) {
+    var isScan = name === 'scan';
+    if (!isScan) lastTab = name;
+
+    document.getElementById('view-home').classList.toggle('active', name === 'home');
+    document.getElementById('view-redeem').classList.toggle('active', name === 'redeem');
+    document.getElementById('view-account').classList.toggle('active', name === 'account');
+    document.getElementById('view-settings').classList.toggle('active', name === 'settings');
+    document.getElementById('view-scan').classList.toggle('active', isScan);
+
+    document.querySelectorAll('[data-view]').forEach(function (el) {
+      el.classList.toggle('active', el.dataset.view === name);
+    });
+
+    if (name === 'scan') startScan(); else stopScan();
+    if (name === 'redeem') { renderUserDependentUI(); loadRedeemHistory(); }
+    if (name === 'account') renderAccountUI();
+  }
+
+  document.querySelectorAll('[data-view]').forEach(function (el) {
+    el.addEventListener('click', function () { switchView(el.dataset.view); });
+  });
+  document.getElementById('scanFabBtn').addEventListener('click', function () { switchView('scan'); });
+  document.getElementById('scanCloseBtn').addEventListener('click', function () { switchView(lastTab); });
+  document.getElementById('sideLogoutBtn').addEventListener('click', doLogout);
+  var sideNavLogo = document.getElementById('sideNavLogo');
+  sideNavLogo.addEventListener('click', function () { switchView('home'); });
+  sideNavLogo.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); switchView('home'); }
+  });
+  var avatarInitials = document.getElementById('avatarInitials');
+  avatarInitials.addEventListener('click', function () { switchView('account'); });
+  avatarInitials.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); switchView('account'); }
+  });
+
+  // ---------- Shared user state ----------
+  var currentUser = null;
+
+  function initials(name) {
+    if (!name) return '';
+    var parts = name.trim().split(/\s+/);
+    return ((parts[0] || '')[0] || '') + ((parts[1] || '')[0] || '');
+  }
+
+  function renderUserDependentUI() {
+    if (!currentUser) return;
+    var balEl = document.getElementById('balanceAmount');
+    balEl.textContent = '\u20a6 ' + currentUser.balance.toLocaleString();
+    balEl.classList.remove('skeleton');
+    document.getElementById('shopName').textContent = currentUser.shop_name || '';
+    document.getElementById('greetName').textContent = currentUser.full_name || '';
+    document.getElementById('avatarInitials').textContent = initials(currentUser.full_name).toUpperCase();
+
+    document.getElementById('availableAmount').textContent = '\u20a6 ' + currentUser.balance.toLocaleString();
+    document.getElementById('tier2Section').style.display = currentUser.tier2_submitted ? 'none' : 'block';
+
+    document.getElementById('scanBalanceAmount').textContent = '\u20a6 ' + currentUser.balance.toLocaleString();
+  }
+
+  function renderAccountUI() {
+    if (!currentUser) return;
+    var set = function (id, val) { document.getElementById(id).textContent = (val === undefined || val === null || val === '') ? '\u2014' : val; };
+
+    set('accFullName', currentUser.full_name);
+    set('accPhone', currentUser.phone_number);
+    set('accEmail', currentUser.email);
+    set('accShopName', currentUser.shop_name);
+    set('accRetailerType', currentUser.retailer_type);
+    set('accLocation', currentUser.shop_city && currentUser.shop_state ? (currentUser.shop_city + ', ' + currentUser.shop_state) : null);
+    set('accAddress', currentUser.shop_address);
+    set('accStocking', currentUser.stocking_mellow === undefined || currentUser.stocking_mellow === null ? null :
+      (currentUser.stocking_mellow ? ('Yes, since ' + (currentUser.stocking_since || '\u2014')) : 'No'));
+    set('accReferral', currentUser.referral_source);
+    set('accCreated', currentUser.created_at ? fmtDate(currentUser.created_at) : null);
+
+    var dist = currentUser.referral_distributor;
+    set('accDistName', dist ? dist.full_name : null);
+    set('accDistPhone', dist ? dist.phone_number : null);
+    set('accDistPlace', dist ? dist.place : null);
+
+    var statusEl = document.getElementById('accTier2Status');
+    if (currentUser.tier2_submitted) {
+      statusEl.innerHTML = currentUser.tier2_verified
+        ? '<span class="verified-tag">&#10003; Verified by Admin</span>'
+        : '<span class="unverified-tag">Submitted - awaiting review</span>';
+      document.getElementById('accBankRow').style.display = 'flex';
+      document.getElementById('accAcctRow').style.display = 'flex';
+      set('accBank', currentUser.bank_name);
+      set('accAcct', currentUser.account_number && currentUser.account_name ? (currentUser.account_number + ' (' + currentUser.account_name + ')') : null);
+    } else {
+      statusEl.innerHTML = '<span class="unverified-tag">Not yet verified</span>';
+      document.getElementById('accBankRow').style.display = 'none';
+      document.getElementById('accAcctRow').style.display = 'none';
+    }
+  }
+
+  function loadUser() {
+    fetch('/api/user/me', { headers: { Authorization: 'Bearer ' + token } })
+      .then(function (r) {
+        if (r.status === 401) { localStorage.removeItem('mellow_token'); window.location.href = '/app'; return null; }
+        return r.json();
+      })
+      .then(function (data) {
+        if (!data) return;
+        currentUser = data;
+        localStorage.setItem('mellow_user', JSON.stringify(data));
+        renderUserDependentUI();
+        if (document.getElementById('view-account').classList.contains('active')) renderAccountUI();
+      })
+      .catch(function () {
+        var cached = localStorage.getItem('mellow_user');
+        if (cached) { currentUser = JSON.parse(cached); renderUserDependentUI(); }
+      });
+  }
+
+  // ---------- Redemption history (Redeem tab) ----------
+  function loadRedeemHistory() {
+    var list = document.getElementById('redeemHistoryList');
+    fetch('/api/user/redemptions', { headers: { Authorization: 'Bearer ' + token } })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.redemptions || data.redemptions.length === 0) {
+          list.innerHTML = '<div class="empty">No redemption requests yet.</div>';
+          return;
+        }
+        list.innerHTML = data.redemptions.map(function (r) {
+          var reason = r.status === 'rejected' && r.rejection_reason ? '<div class="req-reason">Reason: ' + r.rejection_reason + '</div>' : '';
+          return '<div class="req-card"><div class="req-top"><div class="req-amount">\u20a6 ' + r.amount.toLocaleString() +
+            '</div><div class="req-status ' + r.status + '">' + r.status + '</div></div><div class="req-date">Requested ' +
+            fmtDate(r.created_at) + '</div>' + reason + '</div>';
+        }).join('');
+      })
+      .catch(function () { list.innerHTML = '<div class="empty">Could not load history. Please check your connection.</div>'; });
+  }
+
+  // ---------- Scan history (Home) ----------
+  // Note: this calls /api/user/scans, which doesn't exist on the backend yet -
+  // it needs a small route added (SELECT value, used_at FROM qr_codes WHERE
+  // used_by = ?). Until then this will just show the empty state below.
+  function loadScanHistory() {
+    var list = document.getElementById('scanHistoryList');
+    fetch('/api/user/scans', { headers: { Authorization: 'Bearer ' + token } })
+      .then(function (r) { if (!r.ok) throw new Error('not available'); return r.json(); })
+      .then(function (data) {
+        if (!data.scans || data.scans.length === 0) {
+          list.innerHTML = '<div class="empty">No scans yet. Scan a MelloW QR code to add balance.</div>';
+          return;
+        }
+        list.innerHTML = data.scans.map(function (s) {
+          return '<div class="scan-item">' +
+            '<div class="scan-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></div>' +
+            '<div class="scan-mid"><div class="scan-title">QR Code Scanned</div><div class="scan-time">' + fmtDateTime(s.used_at) + '</div></div>' +
+            '<div class="scan-amount">+\u20a6 ' + s.value.toLocaleString() + '</div>' +
+          '</div>';
+        }).join('');
+      })
+      .catch(function () {
+        list.innerHTML = '<div class="empty">No scans yet. Scan a MelloW QR code to add balance.</div>';
+      });
+  }
+
+  // ---------- Scan (camera) ----------
+  var video = document.getElementById('video');
+  var canvas = document.getElementById('canvas');
+  var ctx = canvas.getContext('2d', { willReadFrequently: true });
+  var cameraMsg = document.getElementById('cameraMsg');
+  var resultBanner = document.getElementById('resultBanner');
+  var scanStream = null;
+  var scanRunning = false;
+  var scanProcessing = false;
+
+  function showScanResult(kind, message) {
+    resultBanner.className = 'result-banner ' + kind;
+    resultBanner.textContent = message;
+  }
+
+  function bumpScanBalance() {
+    ['scanBalanceAmount', 'balanceAmount'].forEach(function (id) {
+      var el = document.getElementById(id);
+      el.classList.remove('bump');
+      void el.offsetWidth; // restart animation
+      el.classList.add('bump');
+      setTimeout(function () { el.classList.remove('bump'); }, 550);
+    });
+  }
+
+  function flyCoinsToBalance() {
+    var startEl = document.getElementById('scannerFrame');
+    var endEl = document.getElementById('scanBalanceAmount');
+    if (!startEl || !endEl) return;
+    var startRect = startEl.getBoundingClientRect();
+    var endRect = endEl.getBoundingClientRect();
+    var startX = startRect.left + startRect.width / 2;
+    var startY = startRect.top + startRect.height / 2;
+    var endX = endRect.left + endRect.width / 2;
+    var endY = endRect.top + endRect.height / 2;
+
+    var coinCount = 6;
+    for (var i = 0; i < coinCount; i++) {
+      (function (i) {
+        var coin = document.createElement('div');
+        coin.className = 'coin';
+        coin.textContent = '\u20a6';
+        coin.style.left = (startX - 11 + (Math.random() * 24 - 12)) + 'px';
+        coin.style.top = (startY - 11 + (Math.random() * 24 - 12)) + 'px';
+        document.body.appendChild(coin);
+
+        setTimeout(function () {
+          coin.style.transform = 'translate(' + (endX - startX) + 'px,' + (endY - startY) + 'px) scale(0.35)';
+          coin.style.opacity = '0';
+        }, i * 55);
+
+        setTimeout(function () { coin.remove(); }, 900 + i * 55);
+      })(i);
+    }
+  }
+
+  function submitCode(code) {
+    if (scanProcessing) return;
+    scanProcessing = true;
+    fetch('/api/qr/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ code: code }),
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+      .then(function (res) {
+        if (res.ok) {
+          showScanResult('success', res.data.message);
+          flyCoinsToBalance();
+          if (currentUser) currentUser.balance = res.data.balance;
+          renderUserDependentUI();
+          bumpScanBalance();
+          loadScanHistory();
+        } else {
+          showScanResult('error', res.data.error);
+        }
+      })
+      .catch(function () { showScanResult('error', 'Could not reach the server. Please check your connection.'); })
+      .finally(function () {
+        setTimeout(function () { scanProcessing = false; resultBanner.className = 'result-banner'; }, 2500);
+      });
+  }
+
+  function scanTick() {
+    if (!scanRunning) return;
+    if (!scanProcessing && video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+      if (code && code.data) submitCode(code.data);
+    }
+    requestAnimationFrame(scanTick);
+  }
+
+  function startScan() {
+    if (scanRunning) return;
+    scanRunning = true;
+    cameraMsg.style.display = 'flex';
+    cameraMsg.textContent = 'Requesting camera access\u2026';
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(function (stream) {
+        scanStream = stream;
+        video.srcObject = stream;
+        video.setAttribute('playsinline', true);
+        video.play();
+        cameraMsg.style.display = 'none';
+        requestAnimationFrame(scanTick);
+      })
+      .catch(function () {
+        cameraMsg.textContent = 'Could not access the camera. Please allow camera permission, or enter the code manually below.';
+      });
+  }
+  function stopScan() {
+    scanRunning = false;
+    if (scanStream) { scanStream.getTracks().forEach(function (t) { t.stop(); }); scanStream = null; }
+  }
+  document.getElementById('manualSubmit').addEventListener('click', function () {
+    var val = document.getElementById('manualCode').value.trim();
+    if (val) submitCode(val);
+  });
+
+  // ---------- Redeem ----------
+  var redeemForm = document.getElementById('redeemForm');
+  var redeemSubmitBtn = document.getElementById('redeemSubmitBtn');
+  var redeemFormError = document.getElementById('redeemFormError');
+  var redeemFormSuccess = document.getElementById('redeemFormSuccess');
+  enableFormKeyNav(redeemForm, 'input:not([type=file]):not([type=checkbox]), select, textarea');
+
+  ['id_document', 'shop_photo'].forEach(function (id) {
+    document.getElementById(id).addEventListener('change', function (e) {
+      var label = document.getElementById(id === 'id_document' ? 'idFileLabel' : 'shopFileLabel');
+      var text = document.getElementById(id === 'id_document' ? 'idFileText' : 'shopFileText');
+      if (e.target.files[0]) { label.classList.add('has-file'); text.textContent = e.target.files[0].name; }
+    });
+  });
+
+  redeemForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    clearErrors(redeemForm);
+    redeemFormError.style.display = 'none';
+    redeemFormSuccess.style.display = 'none';
+
+    var amount = parseInt(redeemForm.amount.value, 10);
+    var userBalance = currentUser ? currentUser.balance : 0;
+    var hasError = false;
+    if (!amount || amount <= 0) { showError('amount', 'Please enter a valid amount.'); hasError = true; }
+    else if (amount > userBalance) { showError('amount', 'Amount cannot exceed your available balance.'); hasError = true; }
+
+    var tier2Visible = document.getElementById('tier2Section').style.display !== 'none';
+    if (tier2Visible) {
+      var idFile = document.getElementById('id_document').files[0];
+      var shopFile = document.getElementById('shop_photo').files[0];
+      if (!idFile) { showError('id_document', 'Please upload a valid government ID.'); hasError = true; }
+      if (!shopFile) { showError('shop_photo', 'Please upload a photo of your shop.'); hasError = true; }
+      if (!redeemForm.bank_name.value.trim()) { showError('bank_name', 'Please enter your bank name.'); hasError = true; }
+      if (!/^\d{10}$/.test(redeemForm.account_number.value.trim())) { showError('account_number', 'Please enter a valid 10-digit account number.'); hasError = true; }
+      if (!redeemForm.account_name.value.trim()) { showError('account_name', 'Please enter the account name.'); hasError = true; }
+      if (!document.getElementById('consent').checked) { showError('consent', 'Please accept the data usage & terms to continue.'); hasError = true; }
+    }
+    if (hasError) return;
+
+    redeemSubmitBtn.disabled = true;
+    redeemSubmitBtn.textContent = 'Submitting...';
+
+    var fd = new FormData();
+    fd.append('amount', amount);
+    if (tier2Visible) {
+      fd.append('id_document', document.getElementById('id_document').files[0]);
+      fd.append('shop_photo', document.getElementById('shop_photo').files[0]);
+      fd.append('bank_name', redeemForm.bank_name.value.trim());
+      fd.append('account_number', redeemForm.account_number.value.trim());
+      fd.append('account_name', redeemForm.account_name.value.trim());
+      fd.append('consent', 'true');
+    }
+
+    fetch('/api/user/redeem', { method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: fd })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          if (res.data.field) showError(res.data.field, res.data.error);
+          else { redeemFormError.style.display = 'block'; redeemFormError.textContent = res.data.error || 'Something went wrong.'; }
+          redeemSubmitBtn.disabled = false;
+          redeemSubmitBtn.textContent = 'Submit Request';
+          return;
+        }
+        redeemFormSuccess.style.display = 'block';
+        redeemFormSuccess.textContent = res.data.message;
+        redeemForm.reset();
+        loadUser();
+        loadRedeemHistory();
+        redeemSubmitBtn.disabled = false;
+        redeemSubmitBtn.textContent = 'Submit Request';
+      })
+      .catch(function () {
+        redeemFormError.style.display = 'block';
+        redeemFormError.textContent = 'Could not reach the server. Please check your connection.';
+        redeemSubmitBtn.disabled = false;
+        redeemSubmitBtn.textContent = 'Submit Request';
+      });
+  });
+
+  // ---------- Init ----------
+  var cachedUser = localStorage.getItem('mellow_user');
+  if (cachedUser) { currentUser = JSON.parse(cachedUser); renderUserDependentUI(); }
+  loadUser();
+  loadScanHistory();
+</script>
+</body>
+</html>

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mellow</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
+<link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon.png">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#E3161C">
+<style>@font-face{font-family:Inter;font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-latin-ext.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}@font-face{font-family:Inter;font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-latin.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}</style>
+<script>
+  (function () {
+    if (localStorage.getItem('mellow_token')) window.location.href = '/dashboard';
+  })();
+</script>
+<style>
+  :root {
+    --maroon: #111111; --red: #E3161C; --red-bright: #c4121a; --gold: #c9a24b;
+    --bg: #F4F4F2; --surface: #ffffff; --border: #E8E8E6; --text: #111111; --text-muted: #6e6e6a;
+    --error: #E3161C; --error-bg: #fdecec; --success: #1f8a4c; --radius: 14px;
+    --shadow: 0 10px 30px rgba(17, 17, 17, 0.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text);
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .card { width: 100%; max-width: 400px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px 28px 24px; }
+  .login-logo { --h: 56px; height: var(--h); margin: 4px auto 14px; display: flex; align-items: flex-start; justify-content: center; gap: 10px; }
+  .login-logo img { height: var(--h); width: auto; display: block; }
+  .login-tag { margin-top: calc(var(--h) * .745); transform: translateY(-50%); line-height: 1; font-size: 14px; font-weight: 600; color: var(--text-muted); }
+  .tagline { text-align: center; color: var(--text-muted); font-size: 13px; margin: 0 0 18px; letter-spacing: 0.5px; }
+
+  .tabs { display: flex; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 3px; margin-bottom: 4px; }
+  .tabs button { flex: 1; text-align: center; padding: 8px; border-radius: 8px; border: none; background: none; color: var(--text-muted); font-weight: 600; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .tabs button.active { background: var(--red); color: #fff; }
+
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; margin-top: 14px; }
+  input, select {
+    width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font-size: 15px; font-family: inherit; appearance: none;
+  }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%238a7674' stroke-width='2' fill='none'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; }
+  input:focus, select:focus { outline: none; border-color: var(--red); }
+  input.input-error, select.input-error { border-color: var(--error); background: var(--error-bg); }
+  .field-error { display: none; color: var(--error); font-size: 12.5px; margin-top: 6px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .radio-group { display: flex; gap: 10px; margin-top: 6px; }
+  .radio-option { flex: 1; border: 1px solid var(--border); border-radius: 10px; padding: 10px; text-align: center; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted); background: var(--bg); }
+  .radio-option.selected { border-color: var(--red); background: rgba(227,22,28,0.08); color: var(--red); }
+  .radio-option input { display: none; }
+  .hidden { display: none !important; }
+
+  .form-error { display: none; background: var(--error-bg); color: var(--error); border: 1px solid var(--error); padding: 10px 12px; border-radius: 10px; font-size: 13.5px; margin-top: 18px; }
+  .form-success { display: none; background: #eaf7ee; color: var(--success); border: 1px solid var(--success); padding: 10px 12px; border-radius: 10px; font-size: 13.5px; margin-top: 18px; }
+
+  button[type="submit"] { width: 100%; margin-top: 20px; padding: 14px; border: none; border-radius: 10px; background: var(--red); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  button[type="submit"]:disabled { opacity: 0.6; cursor: default; }
+  button[type="submit"]:hover:not(:disabled) { background: var(--red-bright); }
+
+  .foot { text-align: center; margin-top: 14px; font-size: 13.5px; color: var(--text-muted); }
+  .foot a { color: var(--red); font-weight: 600; text-decoration: none; cursor: pointer; }
+
+  .success-view { display: none; text-align: center; padding: 20px 0; }
+  .success-view .icon { width: 64px; height: 64px; border-radius: 50%; background: var(--success); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 18px; }
+  .success-view h2 { font-family: 'Inter', serif; margin: 0 0 10px; }
+  .success-view p { color: var(--text-muted); font-size: 14.5px; line-height: 1.6; margin: 0 0 24px; }
+  .success-view button { display: inline-block; background: var(--red); color: #fff; border: none; font-weight: 700; padding: 13px 28px; border-radius: 10px; font-size: 14.5px; cursor: pointer; font-family: inherit; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div id="authView">
+      <div class="login-logo"><img src="/assets/logo-horizontal.svg" alt="Mellow" ></div>
+      <p class="tagline">bare essentials, elevated</p>
+
+      <div class="tabs">
+        <button type="button" id="tabLogin" class="active" data-tab="login">Login</button>
+        <button type="button" id="tabRegister" data-tab="register">Register</button>
+      </div>
+
+      <div id="formError" class="form-error"></div>
+      <div id="formNotice" class="form-error"></div>
+
+      <!-- LOGIN FORM -->
+      <form id="loginForm" novalidate>
+        <label for="loginEmail">Email ID</label>
+        <input id="loginEmail" name="email" type="email" placeholder="you@example.com" autocomplete="email">
+        <div class="field-error" data-error-for="loginEmail"></div>
+
+        <label for="loginPassword">Password</label>
+        <input id="loginPassword" name="password" type="password" placeholder="Your password" autocomplete="current-password">
+        <div class="field-error" data-error-for="loginPassword"></div>
+
+        <button type="submit" id="loginSubmitBtn">Log In</button>
+      </form>
+      <p class="foot" id="loginFoot">Don't have an account? <a data-tab="register">Register here</a></p>
+
+      <!-- REGISTER FORM -->
+      <form id="registerForm" class="hidden" novalidate>
+        <label for="full_name">Full Name</label>
+        <input id="full_name" name="full_name" placeholder="e.g. Chidi Okafor" autocomplete="name">
+        <div class="field-error" data-error-for="full_name"></div>
+
+        <label for="phone_number">Phone Number (WhatsApp)</label>
+        <input id="phone_number" name="phone_number" placeholder="080 1234 5678" autocomplete="tel">
+        <div class="field-error" data-error-for="phone_number"></div>
+
+        <label for="shop_name">Shop / Business Name</label>
+        <input id="shop_name" name="shop_name" placeholder="e.g. Chidi Superstore">
+        <div class="field-error" data-error-for="shop_name"></div>
+
+        <label>Shop Location</label>
+        <div class="row2">
+          <div>
+            <input id="shop_state" name="shop_state" placeholder="State">
+            <div class="field-error" data-error-for="shop_state"></div>
+          </div>
+          <div>
+            <input id="shop_city" name="shop_city" placeholder="City / LGA">
+            <div class="field-error" data-error-for="shop_city"></div>
+          </div>
+        </div>
+        <input id="shop_address" name="shop_address" placeholder="Landmark or full address (optional)" style="margin-top: 10px;">
+
+        <label for="retailer_type">Type of Retailer</label>
+        <select id="retailer_type" name="retailer_type">
+          <option value="">Select an option</option>
+          <option value="standalone shop">Standalone shop</option>
+          <option value="market stall">Market stall</option>
+          <option value="supermarket">Supermarket</option>
+          <option value="distributor">Distributor</option>
+          <option value="other">Other</option>
+        </select>
+        <div class="field-error" data-error-for="retailer_type"></div>
+
+        <label>Currently stocking Mellow?</label>
+        <div class="radio-group" id="stockingGroup">
+          <label class="radio-option" data-value="1"><input type="radio" name="stocking_mellow" value="1"> Yes</label>
+          <label class="radio-option" data-value="0"><input type="radio" name="stocking_mellow" value="0"> No</label>
+        </div>
+        <div class="field-error" data-error-for="stocking_mellow"></div>
+
+        <div id="stockingSinceWrap" class="hidden">
+          <label for="stocking_since">Since when?</label>
+          <input id="stocking_since" name="stocking_since" placeholder="e.g. March 2026">
+        </div>
+
+        <label for="referral_source">How'd you hear about Mellow?</label>
+        <select id="referral_source" name="referral_source">
+          <option value="">Select an option</option>
+          <option value="distributor referral">Distributor referral</option>
+          <option value="social media">Social media</option>
+          <option value="saw it in another shop">Saw it in another shop</option>
+          <option value="other">Other</option>
+        </select>
+        <div class="field-error" data-error-for="referral_source"></div>
+
+        <label for="referral_distributor_phone">Referring Distributor's Phone Number</label>
+        <input id="referral_distributor_phone" name="referral_distributor_phone" placeholder="080 1234 5678">
+        <div class="field-error" data-error-for="referral_distributor_phone"></div>
+
+        <label for="regEmail">Email ID</label>
+        <input id="regEmail" name="email" type="email" placeholder="you@example.com" autocomplete="email">
+        <div class="field-error" data-error-for="regEmail"></div>
+
+        <label for="regPassword">Password</label>
+        <input id="regPassword" name="password" type="password" placeholder="Create a password" autocomplete="new-password">
+        <div class="field-error" data-error-for="regPassword"></div>
+
+        <button type="submit" id="registerSubmitBtn">Create Account</button>
+      </form>
+      <p class="foot" id="registerFoot" style="display:none;">Already have an account? <a data-tab="login">Log in here</a></p>
+    </div>
+
+    <div id="successView" class="success-view">
+      <div class="icon">&#10003;</div>
+      <h2>Details Submitted</h2>
+      <p>Your details have been passed on for review. Once approved, you'll be able to log in with the email and password you just created.</p>
+      <button type="button" id="backToLoginBtn">Back to Login</button>
+    </div>
+  </div>
+
+<script>
+  function showError(name, message) {
+    var errorEl = document.querySelector('[data-error-for="' + name + '"]');
+    var inputEl = document.getElementById(name) || document.querySelector('[name="' + name + '"]');
+    if (errorEl) { errorEl.textContent = message; errorEl.style.display = 'block'; }
+    if (inputEl) inputEl.classList.add('input-error');
+  }
+  function clearErrors(form) {
+    form.querySelectorAll('.field-error').forEach(function (el) { el.style.display = 'none'; el.textContent = ''; });
+    form.querySelectorAll('.input-error').forEach(function (el) { el.classList.remove('input-error'); });
+  }
+  function enableFormKeyNav(form) {
+    form.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      if (e.target.tagName === 'TEXTAREA' && !e.ctrlKey) return;
+      e.preventDefault();
+      if (e.ctrlKey) { form.requestSubmit(); return; }
+      var focusable = Array.from(form.querySelectorAll('input, select, textarea'))
+        .filter(function (el) { return !el.disabled && el.offsetParent !== null; });
+      var idx = focusable.indexOf(e.target);
+      if (idx > -1 && idx < focusable.length - 1) focusable[idx + 1].focus();
+      else form.requestSubmit();
+    });
+  }
+
+  var loginForm = document.getElementById('loginForm');
+  var registerForm = document.getElementById('registerForm');
+  var loginFoot = document.getElementById('loginFoot');
+  var registerFoot = document.getElementById('registerFoot');
+  var formError = document.getElementById('formError');
+  var formNotice = document.getElementById('formNotice');
+  enableFormKeyNav(loginForm);
+  enableFormKeyNav(registerForm);
+
+  function setTab(tab) {
+    formError.style.display = 'none';
+    formNotice.style.display = 'none';
+    clearErrors(loginForm);
+    clearErrors(registerForm);
+    var isLogin = tab === 'login';
+    document.getElementById('tabLogin').classList.toggle('active', isLogin);
+    document.getElementById('tabRegister').classList.toggle('active', !isLogin);
+    loginForm.classList.toggle('hidden', !isLogin);
+    registerForm.classList.toggle('hidden', isLogin);
+    loginFoot.style.display = isLogin ? 'block' : 'none';
+    registerFoot.style.display = isLogin ? 'none' : 'block';
+  }
+  document.querySelectorAll('[data-tab]').forEach(function (el) {
+    el.addEventListener('click', function () { setTab(el.dataset.tab); });
+  });
+
+  // ---------- Login ----------
+  loginForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    clearErrors(loginForm);
+    formError.style.display = 'none';
+    formNotice.style.display = 'none';
+
+    var email = loginForm.email.value.trim();
+    var password = loginForm.password.value;
+    var hasError = false;
+    if (!email) { showError('loginEmail', 'Please enter your email address.'); hasError = true; }
+    if (!password) { showError('loginPassword', 'Please enter your password.'); hasError = true; }
+    if (hasError) return;
+
+    var btn = document.getElementById('loginSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Logging in...';
+
+    fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, password: password }),
+    })
+      .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          if (res.data.status === 'pending' || res.data.status === 'rejected') {
+            formNotice.style.display = 'block';
+            formNotice.textContent = res.data.reason ? res.data.error + ' Reason: ' + res.data.reason : res.data.error;
+          } else if (res.data.field) {
+            showError('login' + res.data.field.charAt(0).toUpperCase() + res.data.field.slice(1), res.data.error);
+          } else {
+            formError.style.display = 'block';
+            formError.textContent = res.data.error || 'Something went wrong.';
+          }
+          btn.disabled = false;
+          btn.textContent = 'Log In';
+          return;
+        }
+        sessionStorage.removeItem('mellow_intro_shown'); localStorage.setItem('mellow_token', res.data.token);
+        localStorage.setItem('mellow_user', JSON.stringify(res.data.user));
+        window.location.href = '/dashboard';
+      })
+      .catch(function () {
+        formError.style.display = 'block';
+        formError.textContent = 'Could not reach the server. Please check your connection.';
+        btn.disabled = false;
+        btn.textContent = 'Log In';
+      });
+  });
+
+  // ---------- Register ----------
+  document.querySelectorAll('#stockingGroup .radio-option').forEach(function (opt) {
+    opt.addEventListener('click', function () {
+      document.querySelectorAll('#stockingGroup .radio-option').forEach(function (o) { o.classList.remove('selected'); });
+      opt.classList.add('selected');
+      opt.querySelector('input').checked = true;
+      document.getElementById('stockingSinceWrap').classList.toggle('hidden', opt.dataset.value !== '1');
+    });
+  });
+
+  registerForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    clearErrors(registerForm);
+    formError.style.display = 'none';
+
+    var data = {
+      full_name: registerForm.full_name.value.trim(),
+      phone_number: registerForm.phone_number.value.trim(),
+      shop_name: registerForm.shop_name.value.trim(),
+      shop_state: registerForm.shop_state.value.trim(),
+      shop_city: registerForm.shop_city.value.trim(),
+      shop_address: registerForm.shop_address.value.trim(),
+      retailer_type: registerForm.retailer_type.value,
+      referral_source: registerForm.referral_source.value,
+      referral_distributor_phone: registerForm.referral_distributor_phone.value.trim(),
+      email: document.getElementById('regEmail').value.trim(),
+      password: document.getElementById('regPassword').value,
+    };
+    var stockingChecked = registerForm.querySelector('input[name="stocking_mellow"]:checked');
+    data.stocking_mellow = stockingChecked ? stockingChecked.value === '1' : null;
+    data.stocking_since = document.getElementById('stocking_since').value.trim();
+
+    var hasError = false;
+    if (!data.full_name) { showError('full_name', 'Please enter your full name.'); hasError = true; }
+    if (!/^[0-9+\s-]{7,15}$/.test(data.phone_number)) { showError('phone_number', 'Please enter a valid phone number.'); hasError = true; }
+    if (!data.shop_name) { showError('shop_name', 'Please enter your shop/business name.'); hasError = true; }
+    if (!data.shop_state) { showError('shop_state', 'Please enter your state.'); hasError = true; }
+    if (!data.shop_city) { showError('shop_city', 'Please enter your city or LGA.'); hasError = true; }
+    if (!data.retailer_type) { showError('retailer_type', 'Please select a retailer type.'); hasError = true; }
+    if (data.stocking_mellow === null) { showError('stocking_mellow', 'Please select an option.'); hasError = true; }
+    if (!data.referral_source) { showError('referral_source', 'Please select an option.'); hasError = true; }
+    if (!data.referral_distributor_phone) { showError('referral_distributor_phone', "Please enter your referring distributor's phone number."); hasError = true; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) { showError('regEmail', 'Please enter a valid email address.'); hasError = true; }
+    if (!data.password || data.password.length < 6) { showError('regPassword', 'Password must be at least 6 characters.'); hasError = true; }
+    if (hasError) return;
+
+    var btn = document.getElementById('registerSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          if (res.data.field) showError(res.data.field, res.data.error);
+          else { formError.style.display = 'block'; formError.textContent = res.data.error || 'Something went wrong.'; }
+          btn.disabled = false;
+          btn.textContent = 'Create Account';
+          return;
+        }
+        document.getElementById('authView').style.display = 'none';
+        document.getElementById('successView').style.display = 'block';
+      })
+      .catch(function () {
+        formError.style.display = 'block';
+        formError.textContent = 'Could not reach the server. Please check your connection.';
+        btn.disabled = false;
+        btn.textContent = 'Create Account';
+      });
+  });
+
+  document.getElementById('backToLoginBtn').addEventListener('click', function () {
+    registerForm.reset();
+    document.querySelectorAll('#stockingGroup .radio-option').forEach(function (o) { o.classList.remove('selected'); });
+    document.getElementById('stockingSinceWrap').classList.add('hidden');
+    document.getElementById('successView').style.display = 'none';
+    document.getElementById('authView').style.display = 'block';
+    setTab('login');
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mellow Admin</title>
+<link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
+<link rel="icon" type="image/png" sizes="64x64" href="/icons/favicon.png">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#E3161C">
+<style>@font-face{font-family:Inter;font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-latin-ext.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}@font-face{font-family:Inter;font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-latin.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+  /* ---------- Enquiries ---------- */
+  .status-pill.new { background: var(--error-bg); color: var(--red); }
+  .status-pill.read { background: #eeeeec; color: var(--text-muted); }
+  .status-pill.replied { background: var(--success-bg); color: var(--success); }
+  .status-pill.archived { background: #eeeeec; color: var(--text-muted); }
+  .enq-kind { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; }
+  .enq-msg { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: var(--bg); font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+  .enq-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .enq-links a, .btn-ghost { padding: 9px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-weight: 600; font-size: 13px; text-decoration: none; cursor: pointer; font-family: inherit; }
+  .enq-links a:hover, .btn-ghost:hover { border-color: var(--text); }
+  .btn-ghost.danger { color: var(--red); }
+  .enq-filter { margin: -6px 0 18px; }
+  .enq-filter select { padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); font-family: inherit; font-size: 13.5px; color: var(--text); }
+</style>
+<script>
+  if (!localStorage.getItem('mellow_admin_token')) window.location.href = '/admin-login';
+</script>
+<style>
+  :root {
+    --maroon: #111111; --red: #E3161C; --gold: #c9a24b;
+    --bg: #F4F4F2; --surface: #ffffff; --border: #E8E8E6; --text: #111111; --text-muted: #6e6e6a;
+    --error: #E3161C; --error-bg: #fdecec; --success: #1f8a4c; --success-bg: #eaf7ee; --pending: #b8860b;
+    --shadow: 0 10px 30px rgba(17, 17, 17, 0.05);
+  }
+  * { box-sizing: border-box; }
+  html { overflow-y: scroll; }
+  body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); }
+
+  /* ---------- Topbar (mobile) ---------- */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px;
+    background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-logo { --h: 30px; display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+  .role-tag { margin-top: calc(var(--h) * .745); transform: translateY(-50%); line-height: 1; font-size: 13px; font-weight: 600; color: var(--text-muted); }
+  .hamburger {
+    width: 40px; height: 40px; border-radius: 11px; border: 1px solid var(--border); background: var(--bg);
+    display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; cursor: pointer; flex-shrink: 0;
+  }
+  .hamburger span { width: 19px; height: 2px; background: var(--text); display: block; border-radius: 2px; }
+
+  /* ---------- Slide-in nav (mobile) / static sidebar (desktop) ---------- */
+  .nav-overlay { position: fixed; inset: 0; background: rgba(17,17,17,0.55); opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 55; }
+  .nav-overlay.open { opacity: 1; pointer-events: auto; }
+
+  .admin-shell { display: flex; }
+
+  .sidebar {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(78vw, 300px);
+    background: linear-gradient(165deg, var(--maroon), #000000);
+    border-radius: 22px 0 0 22px; transform: translateX(100%); transition: transform .28s ease;
+    z-index: 60; padding: 26px 14px; display: flex; flex-direction: column; gap: 4px;
+    box-shadow: -12px 0 32px rgba(0,0,0,0.3); overflow-y: auto;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-logo { display: none; }
+  .nav-link {
+    display: flex; align-items: center; gap: 13px; padding: 13px 15px; border-radius: 14px; text-decoration: none;
+    color: rgba(255,255,255,0.72); font-weight: 600; font-size: 14.5px; border: none; background: none;
+    text-align: left; width: 100%; cursor: pointer; font-family: inherit;
+  }
+  .nav-link svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.16); color: #fff; }
+  .nav-link.logout {
+    margin-top: auto; color: #fff; background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.2);
+    justify-content: center;
+  }
+  .badge-count { margin-left: auto; background: rgba(255,255,255,0.9); color: var(--red); font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 20px; min-width: 18px; text-align: center; }
+
+  .admin-content { padding: 22px 18px 60px; max-width: 900px; width: 100%; }
+
+  @media (min-width: 768px) {
+    .hamburger, .nav-overlay, .topbar { display: none; }
+    .sidebar {
+      position: sticky; top: 0; right: auto; left: 0; transform: none; height: 100vh; width: 250px;
+      background: var(--surface); border-right: 1px solid var(--border); border-radius: 0; box-shadow: none;
+      padding: 20px 16px;
+    }
+    .sidebar-logo { --h: 34px; display: flex; align-items: flex-start; gap: 10px; margin-bottom: 26px; padding: 0 8px; cursor: pointer; }
+    .sidebar .nav-link { color: var(--text); }
+    .sidebar .nav-link:hover, .sidebar .nav-link.active { background: rgba(227,22,28,0.08); color: var(--red); }
+    .sidebar .nav-link.logout { background: none; border: none; color: var(--error); justify-content: flex-start; }
+    .sidebar .badge-count { background: var(--red); color: #fff; }
+    .admin-content { flex: 1; min-width: 0; padding: 36px 40px; }
+  }
+
+  /* ---------- View switching ---------- */
+  .view { display: none; }
+  .view.active { display: block; }
+  h1.view-title { font-weight: 800; font-size: 22px; margin: 0 0 4px; }
+  .view-sub { color: var(--text-muted); font-size: 13.5px; margin: 0 0 24px; }
+
+  /* ---------- Dashboard ---------- */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; box-shadow: var(--shadow); cursor: pointer; }
+  .stat-card .label { font-size: 12.5px; color: var(--text-muted); font-weight: 600; }
+  .stat-card .value { font-weight: 800; font-size: 26px; margin-top: 6px; }
+  .stat-card.accent { background: linear-gradient(135deg, #E3161C, #b8101a); color: #fff; }
+  .stat-card.accent .label { color: rgba(255,255,255,0.8); }
+    .stat-card .value { white-space: nowrap; }
+  .stat-card.hero { grid-column: 1 / -1; padding: 24px 22px; }
+  .stat-card.hero .label { font-size: 13.5px; }
+  .stat-card.hero .value { font-size: 40px; margin-top: 8px; letter-spacing: -0.02em; }
+  @media (min-width: 768px) { .stat-card { padding: 22px; } .stat-card .value { font-size: 30px; } .stat-card.hero { padding: 30px 28px; } .stat-card.hero .value { font-size: 52px; } }
+
+  /* ---------- Tabs (registrations / redemptions) ---------- */
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .tabs button { padding: 10px 4px; margin-right: 18px; border: none; background: none; font-family: inherit; font-weight: 600; font-size: 14px; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; }
+  .tabs button.active { color: var(--red); border-color: var(--red); }
+
+  /* ---------- Cards ---------- */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow); }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .card-top .name { font-weight: 700; font-size: 16px; }
+  .card-top .shop { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+  .status-pill { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
+  .status-pill.pending { background: #fdf2d9; color: var(--pending); }
+  .status-pill.approved { background: var(--success-bg); color: var(--success); }
+  .status-pill.rejected { background: var(--error-bg); color: var(--error); }
+
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; margin-top: 14px; font-size: 13px; }
+  .detail-grid .dt { color: var(--text-muted); font-weight: 600; }
+  .detail-grid .dd { margin-top: 2px; }
+
+  .actions { display: flex; gap: 10px; margin-top: 16px; }
+  .btn { padding: 10px 16px; border-radius: 8px; border: none; font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit; }
+  .btn-approve { background: var(--success); color: #fff; }
+  .btn-reject { background: var(--error-bg); color: var(--error); }
+  .btn-reject:hover { background: var(--error); color: #fff; }
+
+  .reject-box { display: none; margin-top: 14px; }
+  .reject-box textarea { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 10px; font-family: inherit; font-size: 13.5px; resize: vertical; min-height: 60px; background: var(--surface); color: var(--text); }
+  .reject-box .row { display: flex; gap: 8px; margin-top: 8px; }
+  .field-error { color: var(--error); font-size: 12px; margin-top: 4px; display: none; }
+
+  .empty { text-align: center; color: var(--text-muted); padding: 50px 20px; font-size: 13.5px; }
+  .rejection-reason { margin-top: 10px; font-size: 13px; color: var(--error); }
+
+  /* ---------- Users view ---------- */
+  .search-box { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); font-size: 14.5px; font-family: inherit; margin-bottom: 18px; color: var(--text); }
+  .search-box:focus { outline: none; border-color: var(--red); }
+  .balance-tag { font-weight: 700; color: var(--red); font-size: 15px; }
+  .detail-panel { display: none; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; }
+  .docs-row { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+  .doc-link { padding: 9px 14px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border); text-decoration: none; color: var(--text); font-size: 12.5px; font-weight: 600; }
+  .no-tier2 { font-size: 12.5px; color: var(--text-muted); font-style: italic; margin-top: 14px; }
+
+  /* ---------- QR Codes view ---------- */
+  .generate-form { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 24px; }
+  .generate-form .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .file-input { border: 1.5px dashed var(--border); border-radius: 12px; padding: 18px; text-align: center; cursor: pointer; background: var(--bg); font-size: 13.5px; color: var(--text-muted); display: block; }
+  .file-input.has-file { border-color: var(--success); color: var(--success); border-style: solid; }
+  .file-input input { display: none; }
+  .password-banner {
+    display: none; background: var(--success-bg); border: 1px solid var(--success); border-radius: 10px;
+    padding: 14px; margin-top: 14px; font-size: 13.5px; color: var(--text);
+  }
+  .password-banner .pw { font-weight: 800; font-size: 16px; color: var(--success); font-family: monospace; letter-spacing: 0.5px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; margin-top: 14px; }
+  input, textarea, select { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 15px; font-family: inherit; }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--red); }
+  input.input-error, select.input-error { border-color: var(--error); background: var(--error-bg); }
+  .form-error { display: none; background: var(--error-bg); color: var(--error); border: 1px solid var(--error); padding: 10px 12px; border-radius: 10px; font-size: 13.5px; margin-top: 14px; }
+  .form-success { display: none; background: var(--success-bg); color: var(--success); border: 1px solid var(--success); padding: 10px 12px; border-radius: 10px; font-size: 13.5px; margin-top: 14px; }
+  .btn-primary { margin-top: 18px; padding: 13px 20px; border: none; border-radius: 10px; background: var(--red); color: #fff; font-weight: 700; font-size: 14.5px; cursor: pointer; font-family: inherit; }
+  .btn-primary:disabled { opacity: 0.6; cursor: default; }
+
+  .batch-card { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  .batch-number { font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
+  .batch-value { font-weight: 700; font-size: 20px; }
+  .batch-meta { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
+  .btn-export { padding: 10px 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit; }
+  .btn-export:disabled { opacity: 0.6; cursor: default; }
+  .amount-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+  .amount-picker.input-error { outline: 2px solid var(--error); outline-offset: 3px; border-radius: 10px; }
+  .amount-btn { padding: 12px 6px; border-radius: 10px; border: 2px solid transparent; color: #fff; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; opacity: 0.55; transition: opacity .15s, transform .15s, box-shadow .15s; }
+  .amount-btn:hover { opacity: 0.85; }
+  .amount-btn[aria-checked="true"] { opacity: 1; border-color: #fff; box-shadow: 0 0 0 2px var(--text); transform: translateY(-1px); }
+  .amount-green { background: #2e9e57; }
+  .amount-blue { background: #2a6fd1; }
+  .amount-red { background: #c0392b; }
+  .batch-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .batch-note { flex-basis: 100%; font-size: 12.5px; color: var(--text-muted); margin-top: -4px; display: none; }
+  .batch-note.error { color: var(--error); }
+
+  /* ---------- Users list -> clickable cards ---------- */
+  .user-card { transition: border-color 0.15s; cursor: pointer; }
+  .user-card:hover { border-color: var(--red); }
+
+  /* ---------- User detail (in-app view, opened from Users list) ---------- */
+  .user-detail-back { padding: 9px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit; }
+  .ud-hero { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+  .ud-hero .name { font-weight: 800; font-size: 22px; }
+  .ud-hero .shop { font-size: 14px; color: var(--text-muted); margin-top: 2px; }
+  .ud-hero .balance { font-weight: 800; font-size: 24px; color: var(--red); }
+
+  .section-title { display: flex; align-items: center; justify-content: space-between; margin: 26px 0 12px; }
+  .section-title h2 { font-weight: 700; font-size: 16px; margin: 0; }
+
+  .account-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 6px 0; margin-bottom: 16px; }
+  .account-card .group-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 14px 16px 6px; }
+  .account-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-top: 1px solid var(--border); gap: 16px; }
+  .account-card .group-title + .account-row { border-top: none; }
+  .account-row .k { font-size: 13px; color: var(--text-muted); flex-shrink: 0; }
+  .account-row .v { font-size: 13.5px; font-weight: 600; text-align: right; }
+  .verified-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; color: var(--success); }
+  .unverified-tag { font-size: 11.5px; font-weight: 700; color: var(--pending); }
+  .docs-row { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+  .doc-link { padding: 9px 14px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border); text-decoration: none; color: var(--text); font-size: 12.5px; font-weight: 600; }
+
+  .scan-item { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 13px 15px; margin-bottom: 10px; }
+  .scan-item .scan-icon { width: 38px; height: 38px; border-radius: 10px; background: var(--success-bg); color: var(--success); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .scan-item .scan-icon svg { width: 19px; height: 19px; }
+  .scan-item .scan-mid { flex: 1; min-width: 0; }
+  .scan-item .scan-title { font-weight: 700; font-size: 14px; }
+  .scan-item .scan-time { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .scan-item .scan-amount { font-weight: 700; color: var(--success); font-size: 14.5px; white-space: nowrap; }
+
+  .req-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 10px; }
+  .req-top { display: flex; justify-content: space-between; align-items: center; }
+  .req-amount { font-weight: 700; font-size: 18px; }
+  .req-date { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+  .req-reason { font-size: 12.5px; color: var(--error); margin-top: 8px; }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-logo" id="topbarLogo" role="button" tabindex="0"><img class="brand-img" src="/assets/logo-horizontal.svg" alt="Mellow" style="height:30px;width:auto;display:block"><span class="role-tag">Admin</span></div>
+    <button class="hamburger" id="hamburgerBtn" aria-label="Menu"><span></span><span></span><span></span></button>
+  </header>
+  <div class="nav-overlay" id="navOverlay"></div>
+
+  <div class="admin-shell">
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-logo" id="sidebarLogo" role="button" tabindex="0"><img class="brand-img" src="/assets/logo-horizontal.svg" alt="Mellow" style="height:34px;width:auto;display:block"><span class="role-tag">Admin</span></div>
+      <button class="nav-link active" data-view="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>Dashboard</button>
+      <button class="nav-link" data-view="registrations"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 011-1h4a1 1 0 011 1v1"/><path d="M9 11h6M9 15h6M9 8h2"/></svg>Registrations <span class="badge-count" id="regBadge" style="display:none;"></span></button>
+      <button class="nav-link" data-view="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M2.5 19.5a6.5 6.5 0 0113 0"/><circle cx="17.5" cy="9.5" r="2.5"/><path d="M15.5 13a5 5 0 016 5"/></svg>Users</button>
+      <button class="nav-link" data-view="distributors"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="15" height="10" rx="2"/><path d="M17 10h3l2 3v4h-5"/><circle cx="7.5" cy="19" r="1.8"/><circle cx="17.5" cy="19" r="1.8"/></svg>Distributors</button>
+      <button class="nav-link" data-view="qr-codes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM19 14h2v2h-2zM14 19h2v2h-2zM19 19h2v2h-2z"/></svg>QR Codes</button>
+      <button class="nav-link" data-view="redemptions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9v.01M18 15v.01"/></svg>Redemptions <span class="badge-count" id="redBadge" style="display:none;"></span></button>
+      <button class="nav-link" data-view="enquiries"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Enquiries<span class="badge-count" id="enqBadge" style="display:none">0</span></button>
+      <button class="nav-link logout" id="logoutBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>Log Out</button>
+    </nav>
+
+    <main class="admin-content">
+
+      <!-- ============ DASHBOARD ============ -->
+      <section id="view-dashboard" class="view active">
+        <h1 class="view-title">Dashboard</h1>
+        <p class="view-sub">Overview of MelloW retailer activity</p>
+        <div class="stat-grid">
+          <div class="stat-card accent hero" data-view="qr-codes">
+            <div class="label">Unused QR Value</div>
+            <div class="value" id="statUnusedValue">--</div>
+          </div>
+          <div class="stat-card" data-view="registrations">
+            <div class="label">Pending Registrations</div>
+            <div class="value" id="statPendingRegs">--</div>
+          </div>
+          <div class="stat-card" data-view="redemptions">
+            <div class="label">Pending Redemptions</div>
+            <div class="value" id="statPendingRedemptions">--</div>
+          </div>
+          <div class="stat-card" data-view="users">
+            <div class="label">Approved Retailers</div>
+            <div class="value" id="statTotalUsers">--</div>
+          </div>
+          <div class="stat-card" data-view="distributors">
+            <div class="label">Distributors</div>
+            <div class="value" id="statTotalDistributors">--</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ REGISTRATIONS ============ -->
+      <section id="view-registrations" class="view">
+        <h1 class="view-title">Registrations</h1>
+        <div class="tabs" id="regTabs">
+          <button data-status="pending" class="active">Pending</button>
+          <button data-status="approved">Approved</button>
+          <button data-status="rejected">Rejected</button>
+        </div>
+        <div id="regList"></div>
+      </section>
+
+      <!-- ============ USERS ============ -->
+      <section id="view-users" class="view">
+        <h1 class="view-title">Users</h1>
+        <p class="view-sub">Click a retailer to open their full profile, scan history, and redemption history.</p>
+        <input class="search-box" id="searchBox" placeholder="Search by name, shop, or email&hellip;">
+        <div id="usersList"></div>
+      </section>
+
+      <!-- ============ DISTRIBUTORS ============ -->
+      <section id="view-distributors" class="view">
+        <h1 class="view-title">Distributors</h1>
+        <p class="view-sub">Added manually - there's no distributor self-registration. Login is by phone number.</p>
+
+        <div class="generate-form">
+          <label for="distFullName">Full Name</label>
+          <input id="distFullName" type="text" placeholder="e.g. Tunde Bello">
+          <div class="field-error" data-error-for="distFullName"></div>
+
+          <div class="row2">
+            <div>
+              <label for="distPhone">Phone Number</label>
+              <input id="distPhone" type="text" placeholder="080 1234 5678">
+              <div class="field-error" data-error-for="distPhone"></div>
+            </div>
+            <div>
+              <label for="distPlace">Place</label>
+              <input id="distPlace" type="text" placeholder="e.g. Ibadan">
+              <div class="field-error" data-error-for="distPlace"></div>
+            </div>
+          </div>
+
+          <label for="distSince">Time Associated With Mellow</label>
+          <input id="distSince" type="text" placeholder="e.g. Since March 2025">
+          <div class="field-error" data-error-for="distSince"></div>
+
+          <div class="row2">
+            <div>
+              <label for="distBankName">Bank Name</label>
+              <input id="distBankName" type="text" placeholder="e.g. GTBank">
+              <div class="field-error" data-error-for="distBankName"></div>
+            </div>
+            <div>
+              <label for="distAccountNumber">Account Number</label>
+              <input id="distAccountNumber" type="text" maxlength="10" placeholder="10-digit account number">
+              <div class="field-error" data-error-for="distAccountNumber"></div>
+            </div>
+          </div>
+
+          <label for="distAccountName">Account Name</label>
+          <input id="distAccountName" type="text" placeholder="Name on the account">
+          <div class="field-error" data-error-for="distAccountName"></div>
+
+          <label>Government ID (NIN slip, voter's card, or driver's license)</label>
+          <label class="file-input" id="distIdFileLabel">
+            <span id="distIdFileText">Tap to upload a photo of the ID</span>
+            <input type="file" id="distIdDocument" accept="image/*,.pdf">
+          </label>
+          <div class="field-error" data-error-for="distIdDocument"></div>
+
+          <div id="distFormError" class="form-error"></div>
+          <div id="distFormSuccess" class="form-success"></div>
+          <div class="password-banner" id="distPasswordBanner">
+            Login password for this distributor: <span class="pw" id="distPasswordValue"></span><br>
+            Share this with them now - it won't be shown again.
+          </div>
+          <button class="btn-primary" id="distCreateBtn" type="button">Add Distributor</button>
+        </div>
+
+        <div id="distributorsList"></div>
+      </section>
+
+      <!-- ============ QR CODES ============ -->
+      <section id="view-qr-codes" class="view">
+        <h1 class="view-title">QR Codes</h1>
+        <p class="view-sub">Generate batches, then download the printable coupons</p>
+
+        <div class="generate-form">
+          <label for="qrBatchNumber">Batch Number</label>
+          <input id="qrBatchNumber" type="text" placeholder="e.g. 61SB16" maxlength="30" autocomplete="off">
+          <div class="field-error" data-error-for="qrBatchNumber"></div>
+
+          <div class="row2">
+            <div>
+              <label for="qrValue">Denomination (&#8358;)</label>
+              <input id="qrValue" type="hidden">
+              <div class="amount-picker" id="qrAmountPicker" role="radiogroup" aria-label="Denomination">
+                <button type="button" class="amount-btn amount-green" data-amount="100" role="radio" aria-checked="false">&#8358;100</button>
+                <button type="button" class="amount-btn amount-blue" data-amount="150" role="radio" aria-checked="false">&#8358;150</button>
+                <button type="button" class="amount-btn amount-red" data-amount="200" role="radio" aria-checked="false">&#8358;200</button>
+              </div>
+              <div class="field-error" data-error-for="qrValue"></div>
+            </div>
+            <div>
+              <label for="qrQuantity">Quantity</label>
+              <input id="qrQuantity" type="number" min="1" max="20000" placeholder="e.g. 10000">
+              <div class="field-error" data-error-for="qrQuantity"></div>
+            </div>
+          </div>
+          <div id="qrFormError" class="form-error"></div>
+          <div id="qrFormSuccess" class="form-success"></div>
+          <button class="btn-primary" id="qrGenerateBtn" type="button">Generate Batch</button>
+        </div>
+
+        <div id="batchList"></div>
+      </section>
+
+      <!-- ============ REDEMPTIONS ============ -->
+      <section id="view-redemptions" class="view">
+        <h1 class="view-title">Redemptions</h1>
+        <div class="tabs" id="redTabs">
+          <button data-status="pending" class="active">Pending</button>
+          <button data-status="approved">Approved</button>
+          <button data-status="rejected">Rejected</button>
+        </div>
+        <div id="redList"></div>
+      </section>
+
+      <!-- ============ USER DETAIL (opened by clicking a retailer in Users) ============ -->
+      <!-- ============ ENQUIRIES ============ -->
+      <section id="view-enquiries" class="view">
+        <h1 class="view-title">Enquiries</h1>
+        <p class="view-sub">Messages and partner applications sent from the Mellow website.</p>
+        <div class="tabs" id="enqTabs">
+          <button data-status="new" class="active">New</button>
+          <button data-status="read">Read</button>
+          <button data-status="replied">Replied</button>
+          <button data-status="archived">Archived</button>
+          <button data-status="all">All</button>
+        </div>
+        <div class="enq-filter"><select id="enqKind"><option value="">All types</option><option value="contact">Contact messages</option><option value="partner">Partner applications</option></select></div>
+        <div id="enqList"></div>
+      </section>
+
+      <section id="view-user-detail" class="view">
+        <button class="user-detail-back" id="userDetailBackBtn" type="button">&larr; Back to Users</button>
+        <div id="userDetailContent" style="margin-top:18px;"><div class="empty">Loading&hellip;</div></div>
+      </section>
+
+      <!-- ============ DISTRIBUTOR DETAIL ============ -->
+      <section id="view-distributor-detail" class="view">
+        <button class="user-detail-back" id="distDetailBackBtn" type="button">&larr; Back to Distributors</button>
+        <div id="distDetailContent" style="margin-top:18px;"><div class="empty">Loading&hellip;</div></div>
+      </section>
+
+    </main>
+  </div>
+
+<script>
+  // ---------- Nav open/close + scroll lock ----------
+  var hamburgerBtn = document.getElementById('hamburgerBtn');
+  var sidebar = document.getElementById('sidebar');
+  var navOverlay = document.getElementById('navOverlay');
+  function openNav() { sidebar.classList.add('open'); navOverlay.classList.add('open'); document.body.style.overflow = 'hidden'; }
+  function closeNav() { sidebar.classList.remove('open'); navOverlay.classList.remove('open'); document.body.style.overflow = ''; }
+  hamburgerBtn.addEventListener('click', function () {
+    if (sidebar.classList.contains('open')) closeNav(); else openNav();
+  });
+  navOverlay.addEventListener('click', closeNav);
+  document.getElementById('logoutBtn').addEventListener('click', function () {
+    localStorage.removeItem('mellow_admin_token');
+    window.location.href = '/admin-login';
+  });
+
+  var sidebarLogo = document.getElementById('sidebarLogo');
+  sidebarLogo.addEventListener('click', function () { switchView('dashboard'); });
+  sidebarLogo.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); switchView('dashboard'); }
+  });
+  var topbarLogo = document.getElementById('topbarLogo');
+  topbarLogo.addEventListener('click', function () { switchView('dashboard'); });
+  topbarLogo.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); switchView('dashboard'); }
+  });
+
+  var token = localStorage.getItem('mellow_admin_token');
+  if (!token) window.location.href = '/admin-login';
+
+  // Amounts that have a coupon design. Keep in step with backend/config/coupons.js.
+  var COUPON_VALUES = [100, 150, 200];
+
+  function authFetch(url, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({}, opts.headers, { Authorization: 'Bearer ' + token });
+    return fetch(url, opts).then(function (r) {
+      if (r.status === 401) { localStorage.removeItem('mellow_admin_token'); window.location.href = '/admin-login'; return Promise.reject(new Error('unauthorized')); }
+      return r;
+    });
+  }
+
+  function fmtDate(iso) {
+    var d = new Date(iso.replace(' ', 'T') + 'Z');
+    return d.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  // ---------- View switching ----------
+  var VIEWS = ['dashboard', 'registrations', 'users', 'distributors', 'qr-codes', 'redemptions', 'enquiries', 'user-detail', 'distributor-detail'];
+  var loadedOnce = {};
+
+  function switchView(name, updateHash) {
+    if (VIEWS.indexOf(name) === -1) name = 'dashboard';
+    VIEWS.forEach(function (v) {
+      document.getElementById('view-' + v).classList.toggle('active', v === name);
+    });
+    // "user-detail" isn't a real sidebar destination - keep Users highlighted
+    // while looking at a retailer's profile, since that's where you came from.
+    var highlightName = name === 'user-detail' ? 'users' : (name === 'distributor-detail' ? 'distributors' : name);
+    document.querySelectorAll('.nav-link[data-view]').forEach(function (el) {
+      el.classList.toggle('active', el.dataset.view === highlightName);
+    });
+    if (updateHash !== false) history.replaceState(null, '', '#' + name);
+    closeNav();
+
+    if (name === 'dashboard') loadStats();
+    if (name === 'registrations') loadRegistrations();
+    if (name === 'users' && !loadedOnce.users) { loadUsers(); loadedOnce.users = true; }
+    if (name === 'distributors' && !loadedOnce.distributors) { loadDistributors(); loadedOnce.distributors = true; }
+    if (name === 'qr-codes' && !loadedOnce.qr) { loadBatches(); loadedOnce.qr = true; }
+    if (name === 'redemptions') loadRedemptions();
+    if (name === 'enquiries') loadEnquiries();
+  }
+
+  document.querySelectorAll('[data-view]').forEach(function (el) {
+    el.addEventListener('click', function () { switchView(el.dataset.view); });
+  });
+
+
+  // ---------- Enquiries (website contact + partner forms) ----------
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+  }
+  var enqStatus = 'new', enqKind = '';
+  var enqList = document.getElementById('enqList');
+
+  function refreshEnqBadge() {
+    authFetch('/api/enquiries/admin/count').then(function (r) { return r.json(); }).then(function (d) {
+      var b = document.getElementById('enqBadge');
+      b.textContent = d.new; b.style.display = d.new > 0 ? '' : 'none';
+    }).catch(function () {});
+  }
+
+  function loadEnquiries() {
+    enqList.innerHTML = '<div class="empty">Loading&hellip;</div>';
+    var q = [];
+    if (enqStatus !== 'all') q.push('status=' + enqStatus);
+    if (enqKind) q.push('kind=' + enqKind);
+    authFetch('/api/enquiries/admin?' + q.join('&'))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.enquiries || !data.enquiries.length) {
+          enqList.innerHTML = '<div class="empty">No ' + (enqStatus === 'all' ? '' : enqStatus + ' ') + 'enquiries.</div>';
+          return;
+        }
+        enqList.innerHTML = data.enquiries.map(renderEnquiry).join('');
+      })
+      .catch(function () { enqList.innerHTML = '<div class="empty">Could not load enquiries.</div>'; });
+    refreshEnqBadge();
+  }
+
+  function renderEnquiry(e) {
+    var isPartner = e.kind === 'partner';
+    var digits = (e.phone || '').replace(/\D/g, '');
+    if (digits.charAt(0) === '0') digits = '234' + digits.slice(1);
+    var rows = [];
+    if (isPartner) {
+      rows.push(['Business', e.business], ['Business model', e.topic], ['Location', e.city]);
+    } else if (e.topic) {
+      rows.push(['Department', e.topic]);
+    }
+    rows.push(['Phone', e.phone], ['Email', e.email], ['Received', fmtDate(e.created_at)]);
+    var grid = rows.filter(function (r) { return r[1]; }).map(function (r) {
+      return '<div><div class="dt">' + r[0] + '</div><div class="dd">' + esc(r[1]) + '</div></div>';
+    }).join('');
+    var links = '';
+    if (e.email) links += '<a href="mailto:' + esc(e.email) + '">Email</a>';
+    if (e.phone) links += '<a href="tel:' + esc(e.phone) + '">Call</a>';
+    if (digits) links += '<a href="https://wa.me/' + digits + '" target="_blank" rel="noopener">WhatsApp</a>';
+    var btns = '';
+    if (e.status === 'new') btns += '<button class="btn-ghost" data-enq="read" data-id="' + e.id + '">Mark read</button>';
+    if (e.status !== 'replied') btns += '<button class="btn-ghost" data-enq="replied" data-id="' + e.id + '">Mark replied</button>';
+    if (e.status !== 'archived') btns += '<button class="btn-ghost" data-enq="archived" data-id="' + e.id + '">Archive</button>';
+    if (e.status === 'archived') btns += '<button class="btn-ghost" data-enq="new" data-id="' + e.id + '">Move to New</button>';
+    btns += '<button class="btn-ghost danger" data-enq="delete" data-id="' + e.id + '">Delete</button>';
+    return '<div class="card"><div class="card-top"><div><div class="enq-kind">' + (isPartner ? 'Partner application' : 'Contact message') + '</div>' +
+      '<div class="name">' + esc(e.name) + '</div></div><div class="status-pill ' + esc(e.status) + '">' + esc(e.status) + '</div></div>' +
+      '<div class="detail-grid">' + grid + '</div>' +
+      (e.message ? '<div class="enq-msg">' + esc(e.message) + '</div>' : '') +
+      '<div class="enq-links">' + links + '</div><div class="actions" style="flex-wrap:wrap">' + btns + '</div></div>';
+  }
+
+  enqList.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-enq]'); if (!b) return;
+    var id = b.dataset.id, act = b.dataset.enq;
+    if (act === 'delete') {
+      if (!confirm('Delete this enquiry permanently?')) return;
+      authFetch('/api/enquiries/admin/' + id, { method: 'DELETE' }).then(loadEnquiries);
+    } else {
+      authFetch('/api/enquiries/admin/' + id, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: act }),
+      }).then(loadEnquiries);
+    }
+  });
+  document.querySelectorAll('#enqTabs button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('#enqTabs button').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active'); enqStatus = btn.dataset.status; loadEnquiries();
+    });
+  });
+  document.getElementById('enqKind').addEventListener('change', function (e) { enqKind = e.target.value; loadEnquiries(); });
+  refreshEnqBadge();
+
+  // ---------- Dashboard ----------
+  function loadStats() {
+    authFetch('/api/admin/stats')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        document.getElementById('statPendingRegs').textContent = data.pending_registrations;
+        document.getElementById('statPendingRedemptions').textContent = data.pending_redemptions;
+        document.getElementById('statTotalUsers').textContent = data.total_users;
+        document.getElementById('statUnusedValue').textContent = '\u20a6 ' + data.unused_codes_value.toLocaleString();
+        document.getElementById('statTotalDistributors').textContent = data.total_distributors;
+
+        var b1 = document.getElementById('regBadge');
+        if (data.pending_registrations > 0) { b1.style.display = 'inline-block'; b1.textContent = data.pending_registrations; }
+        else { b1.style.display = 'none'; }
+
+        var b2 = document.getElementById('redBadge');
+        if (data.pending_redemptions > 0) { b2.style.display = 'inline-block'; b2.textContent = data.pending_redemptions; }
+        else { b2.style.display = 'none'; }
+      })
+      .catch(function () {});
+  }
+
+  // ---------- Registrations ----------
+  var regStatus = 'pending';
+  var regList = document.getElementById('regList');
+
+  function loadRegistrations() {
+    regList.innerHTML = '<div class="empty">Loading&hellip;</div>';
+    authFetch('/api/admin/registrations?status=' + regStatus)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.registrations || data.registrations.length === 0) {
+          regList.innerHTML = '<div class="empty">No ' + regStatus + ' registrations.</div>';
+          return;
+        }
+        regList.innerHTML = data.registrations.map(renderRegCard).join('');
+        attachRegHandlers();
+      })
+      .catch(function () { regList.innerHTML = '<div class="empty">Could not load registrations.</div>'; });
+  }
+
+  function renderRegCard(reg) {
+    var rejectionNote = reg.status === 'rejected' && reg.rejection_reason
+      ? '<div class="rejection-reason">Reason: ' + reg.rejection_reason + '</div>' : '';
+    var actions = reg.status === 'pending' ? (
+      '<div class="actions">' +
+        '<button class="btn btn-approve" data-action="approve-reg" data-id="' + reg.id + '">Approve</button>' +
+        '<button class="btn btn-reject" data-action="show-reject-reg" data-id="' + reg.id + '">Reject</button>' +
+      '</div>' +
+      '<div class="reject-box" id="reject-reg-' + reg.id + '">' +
+        '<textarea placeholder="Reason for rejection (sent to the retailer)" id="reason-reg-' + reg.id + '"></textarea>' +
+        '<div class="field-error" id="reason-reg-error-' + reg.id + '"></div>' +
+        '<div class="row"><button class="btn btn-reject" data-action="confirm-reject-reg" data-id="' + reg.id + '">Confirm Reject</button></div>' +
+      '</div>'
+    ) : '';
+
+    return '<div class="card">' +
+      '<div class="card-top">' +
+        '<div><div class="name">' + reg.full_name + '</div><div class="shop">' + reg.shop_name + '</div></div>' +
+        '<div class="status-pill ' + reg.status + '">' + reg.status + '</div>' +
+      '</div>' +
+      '<div class="detail-grid">' +
+        '<div><div class="dt">Phone (WhatsApp)</div><div class="dd">' + reg.phone_number + '</div></div>' +
+        '<div><div class="dt">Email</div><div class="dd">' + reg.email + '</div></div>' +
+        '<div><div class="dt">Location</div><div class="dd">' + reg.shop_city + ', ' + reg.shop_state + '</div></div>' +
+        '<div><div class="dt">Address</div><div class="dd">' + (reg.shop_address || '&mdash;') + '</div></div>' +
+        '<div><div class="dt">Retailer Type</div><div class="dd">' + reg.retailer_type + '</div></div>' +
+        '<div><div class="dt">Stocking Mellow?</div><div class="dd">' + (reg.stocking_mellow ? ('Yes, since ' + (reg.stocking_since || '\u2014')) : 'No') + '</div></div>' +
+        '<div><div class="dt">Heard via</div><div class="dd">' + reg.referral_source + '</div></div>' +
+        '<div><div class="dt">Submitted</div><div class="dd">' + fmtDate(reg.created_at) + '</div></div>' +
+      '</div>' + rejectionNote + actions + '</div>';
+  }
+
+  function attachRegHandlers() {
+    regList.querySelectorAll('[data-action="approve-reg"]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        btn.disabled = true;
+        authFetch('/api/admin/registrations/' + btn.dataset.id + '/approve', { method: 'POST' })
+          .then(function () { loadRegistrations(); }).catch(function () {});
+      });
+    });
+    regList.querySelectorAll('[data-action="show-reject-reg"]').forEach(function (btn) {
+      btn.addEventListener('click', function () { document.getElementById('reject-reg-' + btn.dataset.id).style.display = 'block'; });
+    });
+    regList.querySelectorAll('[data-action="confirm-reject-reg"]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.dataset.id;
+        var reason = document.getElementById('reason-reg-' + id).value.trim();
+        var errorEl = document.getElementById('reason-reg-error-' + id);
+        if (!reason) { errorEl.textContent = 'Please provide a rejection reason.'; errorEl.style.display = 'block'; return; }
+        btn.disabled = true;
+        authFetch('/api/admin/registrations/' + id + '/reject', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: reason }),
+        }).then(function () { loadRegistrations(); }).catch(function () {});
+      });
+    });
+  }
+
+  document.querySelectorAll('#regTabs button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('#regTabs button').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      regStatus = btn.dataset.status;
+      loadRegistrations();
+    });
+  });
+
+  // ---------- Users ----------
+  var usersList = document.getElementById('usersList');
+  var searchBox = document.getElementById('searchBox');
+  var searchTimer;
+
+  function loadUsers() {
+    usersList.innerHTML = '<div class="empty">Loading&hellip;</div>';
+    authFetch('/api/admin/users?search=' + encodeURIComponent(searchBox.value.trim()))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.users || data.users.length === 0) { usersList.innerHTML = '<div class="empty">No users found.</div>'; return; }
+        usersList.innerHTML = data.users.map(function (u) {
+          return '<div class="card user-card" data-user-id="' + u.id + '">' +
+              '<div class="card-top">' +
+                '<div><div class="name">' + u.full_name + '</div><div class="shop">' + u.shop_name + ' &middot; joined ' + fmtDate(u.created_at) + '</div></div>' +
+                '<div class="balance-tag">\u20a6 ' + u.balance.toLocaleString() + '</div>' +
+              '</div>' +
+            '</div>';
+        }).join('');
+        usersList.querySelectorAll('.user-card').forEach(function (el) {
+          el.addEventListener('click', function () { openUserDetail(el.dataset.userId); });
+        });
+      })
+      .catch(function () { usersList.innerHTML = '<div class="empty">Could not load users.</div>'; });
+  }
+
+  searchBox.addEventListener('input', function () { clearTimeout(searchTimer); searchTimer = setTimeout(loadUsers, 300); });
+
+  // ---------- User detail (profile + scan history + redemption history) ----------
+  document.getElementById('userDetailBackBtn').addEventListener('click', function () { switchView('users'); });
+
+  function openUserDetail(id) {
+    switchView('user-detail');
+    var content = document.getElementById('userDetailContent');
+    content.innerHTML = '<div class="empty">Loading&hellip;</div>';
+    authFetch('/api/admin/users/' + id + '/full')
+      .then(function (r) { return r.json(); })
+      .then(function (data) { renderUserDetail(content, data); })
+      .catch(function () { content.innerHTML = '<div class="empty">Could not load this retailer\u2019s details.</div>'; });
+  }
+
+  function renderUserDetail(content, data) {
+    var u = data.user;
+
+    var docsHtml = '<div class="empty" style="padding:16px 0;">Verification not yet submitted.</div>';
+    var verifyStatus = '<span class="unverified-tag">Not yet submitted</span>';
+    var verifyAction = '';
+
+    if (u.tier2_submitted_at && !u.tier2_verified_at) {
+      verifyStatus = '<span class="unverified-tag">Submitted - awaiting your review</span>';
+      verifyAction = '<button class="btn btn-approve" data-action="verify-tier2" data-id="' + u.id + '" style="margin-top:12px;">Confirm Verified</button>';
+    } else if (u.tier2_verified_at) {
+      verifyStatus = '<span class="verified-tag">&#10003; Verified by Admin</span>';
+      verifyAction = '<button class="btn btn-reject" data-action="unverify-tier2" data-id="' + u.id + '" style="margin-top:12px;">Remove Verification</button>';
+    }
+
+    if (u.tier2_submitted_at) {
+      docsHtml =
+        '<div class="account-row"><div class="k">Bank</div><div class="v">' + (u.bank_name || '\u2014') + '</div></div>' +
+        '<div class="account-row"><div class="k">Account</div><div class="v">' + (u.account_number || '\u2014') + ' (' + (u.account_name || '\u2014') + ')</div></div>' +
+        '<div class="account-row"><div class="k">Submitted On</div><div class="v">' + fmtDate(u.tier2_submitted_at) + '</div></div>' +
+        (u.tier2_verified_at ? '<div class="account-row"><div class="k">Verified On</div><div class="v">' + fmtDate(u.tier2_verified_at) + '</div></div>' : '') +
+        '<div class="docs-row">' +
+          (u.id_document_url ? '<a class="doc-link" href="' + u.id_document_url + '" target="_blank" rel="noopener">View ID Document</a>' : '') +
+          (u.shop_photo_url ? '<a class="doc-link" href="' + u.shop_photo_url + '" target="_blank" rel="noopener">View Shop Photo</a>' : '') +
+        '</div>' + verifyAction;
+    }
+
+    var scansHtml = '<div class="empty">No scans yet.</div>';
+    if (data.scans && data.scans.length > 0) {
+      scansHtml = data.scans.map(function (s) {
+        return '<div class="scan-item">' +
+          '<div class="scan-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></div>' +
+          '<div class="scan-mid"><div class="scan-title">QR Code Scanned</div><div class="scan-time">' + fmtDate(s.used_at) + '</div></div>' +
+          '<div class="scan-amount">+\u20a6 ' + s.value.toLocaleString() + '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    var redemptionsHtml = '<div class="empty">No redemption requests yet.</div>';
+    if (data.redemptions && data.redemptions.length > 0) {
+      redemptionsHtml = data.redemptions.map(function (r) {
+        var reason = r.status === 'rejected' && r.rejection_reason ? '<div class="req-reason">Reason: ' + r.rejection_reason + '</div>' : '';
+        return '<div class="req-card"><div class="req-top"><div class="req-amount">\u20a6 ' + r.amount.toLocaleString() +
+          '</div><div class="status-pill ' + r.status + '">' + r.status + '</div></div><div class="req-date">Requested ' +
+          fmtDate(r.created_at) + '</div>' + reason + '</div>';
+      }).join('');
+    }
+
+    content.innerHTML =
+      '<div class="ud-hero">' +
+        '<div><div class="name">' + u.full_name + '</div><div class="shop">' + u.shop_name + '</div></div>' +
+        '<div class="balance">\u20a6 ' + u.balance.toLocaleString() + '</div>' +
+      '</div>' +
+
+      '<div class="account-card">' +
+        '<div class="group-title">Personal</div>' +
+        '<div class="account-row"><div class="k">Phone (WhatsApp)</div><div class="v">' + u.phone_number + '</div></div>' +
+        '<div class="account-row"><div class="k">Email</div><div class="v">' + u.email + '</div></div>' +
+      '</div>' +
+
+      '<div class="account-card">' +
+        '<div class="group-title">Shop</div>' +
+        '<div class="account-row"><div class="k">Retailer Type</div><div class="v">' + u.retailer_type + '</div></div>' +
+        '<div class="account-row"><div class="k">Location</div><div class="v">' + u.shop_city + ', ' + u.shop_state + '</div></div>' +
+        '<div class="account-row"><div class="k">Address</div><div class="v">' + (u.shop_address || '\u2014') + '</div></div>' +
+        '<div class="account-row"><div class="k">Stocking Mellow?</div><div class="v">' + (u.stocking_mellow ? ('Yes, since ' + (u.stocking_since || '\u2014')) : 'No') + '</div></div>' +
+        '<div class="account-row"><div class="k">Heard Via</div><div class="v">' + u.referral_source + '</div></div>' +
+        '<div class="account-row"><div class="k">Registered</div><div class="v">' + fmtDate(u.created_at) + '</div></div>' +
+      '</div>' +
+
+      '<div class="account-card">' +
+        '<div class="group-title">Verification &amp; Payout</div>' +
+        '<div class="account-row"><div class="k">Status</div><div class="v">' + verifyStatus + '</div></div>' +
+        docsHtml +
+      '</div>' +
+
+      '<div class="section-title"><h2>Scan History</h2></div>' +
+      scansHtml +
+
+      '<div class="section-title"><h2>Redemption History</h2></div>' +
+      redemptionsHtml;
+
+    var verifyBtn = content.querySelector('[data-action="verify-tier2"]');
+    if (verifyBtn) {
+      verifyBtn.addEventListener('click', function () {
+        verifyBtn.disabled = true;
+        authFetch('/api/admin/users/' + verifyBtn.dataset.id + '/verify', { method: 'POST' })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (res) {
+            if (res.ok) openUserDetail(verifyBtn.dataset.id);
+            else { verifyBtn.disabled = false; alert(res.data.error || 'Something went wrong.'); }
+          })
+          .catch(function () { verifyBtn.disabled = false; });
+      });
+    }
+    var unverifyBtn = content.querySelector('[data-action="unverify-tier2"]');
+    if (unverifyBtn) {
+      unverifyBtn.addEventListener('click', function () {
+        unverifyBtn.disabled = true;
+        authFetch('/api/admin/users/' + unverifyBtn.dataset.id + '/unverify', { method: 'POST' })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (res) {
+            if (res.ok) openUserDetail(unverifyBtn.dataset.id);
+            else { unverifyBtn.disabled = false; alert(res.data.error || 'Something went wrong.'); }
+          })
+          .catch(function () { unverifyBtn.disabled = false; });
+      });
+    }
+  }
+
+  // ---------- Distributors ----------
+  var distributorsList = document.getElementById('distributorsList');
+  var distFormError = document.getElementById('distFormError');
+  var distFormSuccess = document.getElementById('distFormSuccess');
+  var distPasswordBanner = document.getElementById('distPasswordBanner');
+
+  document.getElementById('distIdDocument').addEventListener('change', function (e) {
+    var label = document.getElementById('distIdFileLabel');
+    var text = document.getElementById('distIdFileText');
+    if (e.target.files[0]) { label.classList.add('has-file'); text.textContent = e.target.files[0].name; }
+  });
+
+  function clearDistErrors() {
+    document.querySelectorAll('#view-distributors .field-error').forEach(function (el) { el.style.display = 'none'; el.textContent = ''; });
+    document.querySelectorAll('#view-distributors .input-error').forEach(function (el) { el.classList.remove('input-error'); });
+  }
+
+  function showDistError(id, message) {
+    var el = document.querySelector('[data-error-for="' + id + '"]');
+    var input = document.getElementById(id);
+    if (el) { el.textContent = message; el.style.display = 'block'; }
+    if (input) input.classList.add('input-error');
+  }
+
+  document.getElementById('distCreateBtn').addEventListener('click', function () {
+    clearDistErrors();
+    distFormError.style.display = 'none';
+    distFormSuccess.style.display = 'none';
+    distPasswordBanner.style.display = 'none';
+
+    var fullName = document.getElementById('distFullName').value.trim();
+    var phone = document.getElementById('distPhone').value.trim();
+    var place = document.getElementById('distPlace').value.trim();
+    var since = document.getElementById('distSince').value.trim();
+    var bankName = document.getElementById('distBankName').value.trim();
+    var accountNumber = document.getElementById('distAccountNumber').value.trim();
+    var accountName = document.getElementById('distAccountName').value.trim();
+    var idFile = document.getElementById('distIdDocument').files[0];
+
+    var hasError = false;
+    if (!fullName) { showDistError('distFullName', "Please enter the distributor's name."); hasError = true; }
+    if (!/^[0-9+\s-]{7,15}$/.test(phone)) { showDistError('distPhone', 'Please enter a valid phone number.'); hasError = true; }
+    if (!place) { showDistError('distPlace', 'Please enter a place.'); hasError = true; }
+    if (!since) { showDistError('distSince', "Please enter how long they've been associated with Mellow."); hasError = true; }
+    if (!bankName) { showDistError('distBankName', 'Please enter a bank name.'); hasError = true; }
+    if (!/^\d{10}$/.test(accountNumber)) { showDistError('distAccountNumber', 'Please enter a valid 10-digit account number.'); hasError = true; }
+    if (!accountName) { showDistError('distAccountName', 'Please enter the account name.'); hasError = true; }
+    if (!idFile) { showDistError('distIdDocument', 'Please upload a government ID.'); hasError = true; }
+    if (hasError) return;
+
+    var btn = document.getElementById('distCreateBtn');
+    btn.disabled = true;
+    btn.textContent = 'Adding\u2026';
+
+    var fd = new FormData();
+    fd.append('full_name', fullName);
+    fd.append('phone_number', phone);
+    fd.append('place', place);
+    fd.append('associated_since', since);
+    fd.append('bank_name', bankName);
+    fd.append('account_number', accountNumber);
+    fd.append('account_name', accountName);
+    fd.append('id_document', idFile);
+
+    authFetch('/api/admin/distributors', { method: 'POST', body: fd })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          var fieldMap = {
+            full_name: 'distFullName', phone_number: 'distPhone', place: 'distPlace',
+            associated_since: 'distSince', bank_name: 'distBankName',
+            account_number: 'distAccountNumber', account_name: 'distAccountName',
+            id_document: 'distIdDocument',
+          };
+          if (res.data.field && fieldMap[res.data.field]) {
+            showDistError(fieldMap[res.data.field], res.data.error);
+          } else {
+            distFormError.style.display = 'block';
+            distFormError.textContent = res.data.error || 'Something went wrong.';
+          }
+        } else {
+          distFormSuccess.style.display = 'block';
+          distFormSuccess.textContent = res.data.message;
+          document.getElementById('distPasswordValue').textContent = res.data.password;
+          distPasswordBanner.style.display = 'block';
+
+          document.getElementById('distFullName').value = '';
+          document.getElementById('distPhone').value = '';
+          document.getElementById('distPlace').value = '';
+          document.getElementById('distSince').value = '';
+          document.getElementById('distBankName').value = '';
+          document.getElementById('distAccountNumber').value = '';
+          document.getElementById('distAccountName').value = '';
+          document.getElementById('distIdDocument').value = '';
+          document.getElementById('distIdFileLabel').classList.remove('has-file');
+          document.getElementById('distIdFileText').textContent = 'Tap to upload a photo of the ID';
+
+          loadDistributors();
+        }
+        btn.disabled = false;
+        btn.textContent = 'Add Distributor';
+      })
+      .catch(function () {
+        distFormError.style.display = 'block';
+        distFormError.textContent = 'Could not reach the server. Please check your connection.';
+        btn.disabled = false;
+        btn.textContent = 'Add Distributor';
+      });
+  });
+
+  function loadDistributors() {
+    distributorsList.innerHTML = '<div class="empty">Loading&hellip;</div>';
+    authFetch('/api/admin/distributors')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.distributors || data.distributors.length === 0) {
+          distributorsList.innerHTML = '<div class="empty">No distributors added yet.</div>';
+          return;
+        }
+        distributorsList.innerHTML = data.distributors.map(function (d) {
+          return '<div class="card user-card" data-dist-id="' + d.id + '">' +
+              '<div class="card-top">' +
+                '<div><div class="name">' + d.full_name + '</div><div class="shop">' + d.phone_number + ' &middot; ' + d.place + '</div></div>' +
+                '<div class="balance-tag">' + d.referred_count + ' referred</div>' +
+              '</div>' +
+            '</div>';
+        }).join('');
+        distributorsList.querySelectorAll('[data-dist-id]').forEach(function (el) {
+          el.addEventListener('click', function () { openDistributorDetail(el.dataset.distId); });
+        });
+      })
+      .catch(function () { distributorsList.innerHTML = '<div class="empty">Could not load distributors.</div>'; });
+  }
+
+  // ---------- Distributor detail (profile + the retailers they referred) ----------
+  document.getElementById('distDetailBackBtn').addEventListener('click', function () { switchView('distributors'); });
+
+  function openDistributorDetail(id) {
+    switchView('distributor-detail');
+    var content = document.getElementById('distDetailContent');
+    content.innerHTML = '<div class="empty">Loading&hellip;</div>';
+    authFetch('/api/admin/distributors/' + id + '/full')
+      .then(function (r) { return r.json(); })
+      .then(function (data) { renderDistributorDetail(content, data); })
+      .catch(function () { content.innerHTML = '<div class="empty">Could not load this distributor\u2019s details.</div>'; });
+  }
+
+  function renderDistributorDetail(content, data) {
+    var d = data.distributor;
+
+    var usersHtml = '<div class="empty">No retailers have registered with this distributor\u2019s phone number yet.</div>';
+    if (data.users && data.users.length > 0) {
+      usersHtml = data.users.map(function (u) {
+        return '<div class="card user-card" data-user-id="' + u.id + '">' +
+            '<div class="card-top">' +
+              '<div><div class="name">' + u.full_name + '</div><div class="shop">' + u.shop_name + ' &middot; joined ' + fmtDate(u.created_at) + '</div></div>' +
+              '<div class="balance-tag">\u20a6 ' + u.balance.toLocaleString() + '</div>' +
+            '</div>' +
+          '</div>';
+      }).join('');
+    }
+
+    content.innerHTML =
+      '<div class="ud-hero">' +
+        '<div><div class="name">' + d.full_name + '</div><div class="shop">' + d.place + '</div></div>' +
+      '</div>' +
+
+      '<div class="account-card">' +
+        '<div class="group-title">Distributor Details</div>' +
+        '<div class="account-row"><div class="k">Phone</div><div class="v">' + d.phone_number + '</div></div>' +
+        '<div class="account-row"><div class="k">Associated Since</div><div class="v">' + d.associated_since + '</div></div>' +
+        '<div class="account-row"><div class="k">Bank</div><div class="v">' + d.bank_name + '</div></div>' +
+        '<div class="account-row"><div class="k">Account</div><div class="v">' + d.account_number + ' (' + d.account_name + ')</div></div>' +
+        '<div class="account-row"><div class="k">Added</div><div class="v">' + fmtDate(d.created_at) + '</div></div>' +
+        (d.id_document_url ? '<div class="docs-row"><a class="doc-link" href="' + d.id_document_url + '" target="_blank" rel="noopener">View ID Document</a></div>' : '') +
+      '</div>' +
+
+      '<div class="section-title"><h2>Retailers Referred (' + (data.users ? data.users.length : 0) + ')</h2></div>' +
+      usersHtml;
+
+    content.querySelectorAll('[data-user-id]').forEach(function (el) {
+      el.addEventListener('click', function () { openUserDetail(el.dataset.userId); });
+    });
+  }
+
+  // ---------- QR Codes ----------
+  var qrBatchNumber = document.getElementById('qrBatchNumber');
+  var qrValue = document.getElementById('qrValue');
+  var qrAmountPicker = document.getElementById('qrAmountPicker');
+  function setAmount(v) {
+    qrValue.value = v || '';
+    qrAmountPicker.classList.remove('input-error');
+    qrAmountPicker.querySelectorAll('.amount-btn').forEach(function (b) {
+      b.setAttribute('aria-checked', String(!!v && b.dataset.amount === String(v)));
+    });
+  }
+  qrAmountPicker.querySelectorAll('.amount-btn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      setAmount(b.dataset.amount);
+      var err = document.querySelector('[data-error-for="qrValue"]');
+      err.style.display = 'none'; err.textContent = '';
+    });
+  });
+  var qrQuantity = document.getElementById('qrQuantity');
+  var qrFormError = document.getElementById('qrFormError');
+  var qrFormSuccess = document.getElementById('qrFormSuccess');
+  var batchList = document.getElementById('batchList');
+
+  function clearQrErrors() {
+    document.querySelectorAll('#view-qr-codes .field-error').forEach(function (el) { el.style.display = 'none'; el.textContent = ''; });
+    document.querySelectorAll('#view-qr-codes .input-error').forEach(function (el) { el.classList.remove('input-error'); });
+  }
+
+  function loadBatches() {
+    batchList.innerHTML = '<div class="empty">Loading&hellip;</div>';
+    authFetch('/api/qr/admin/batches')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.batches || data.batches.length === 0) { batchList.innerHTML = '<div class="empty">No QR batches generated yet.</div>'; return; }
+        batchList.innerHTML = data.batches.map(function (b) {
+          return '<div class="card batch-card">' +
+            '<div><div class="batch-number">' + (b.batch_number || '\u2014') + '</div>' +
+            '<div class="batch-value">\u20a6 ' + b.value.toLocaleString() + ' \u00d7 ' + b.quantity + '</div>' +
+            '<div class="batch-meta">' + b.used_count + ' used &middot; ' + (b.quantity - b.used_count) + ' remaining &middot; generated ' + fmtDate(b.created_at) + '</div></div>' +
+            '<div class="batch-actions">' +
+              '<button class="btn-export" data-action="export" data-id="' + b.id + '" data-batch-number="' + (b.batch_number || 'batch') + '">Export XLSX</button>' +
+              (COUPON_VALUES.indexOf(Number(b.value)) !== -1
+                ? '<button class="btn-export" data-action="coupons" data-id="' + b.id + '">Export ZIP</button>'
+                : '') +
+            '</div>' +
+            '<div class="batch-note"></div>' +
+          '</div>';
+        }).join('');
+        batchList.querySelectorAll('[data-action="export"]').forEach(function (btn) {
+          btn.addEventListener('click', function () { exportBatch(btn); });
+        });
+        batchList.querySelectorAll('[data-action="coupons"]').forEach(function (btn) {
+          btn.addEventListener('click', function () { downloadCoupons(btn); });
+        });
+      })
+      .catch(function () { batchList.innerHTML = '<div class="empty">Could not load batches.</div>'; });
+  }
+
+  // A batch of thousands of coupons is several GB, so the ZIP is not loaded into
+  // the page. The server gives a short-lived link and the browser downloads the
+  // file itself, saving it to disk as the coupons are made.
+  function downloadCoupons(btn) {
+    var note = btn.closest('.batch-card').querySelector('.batch-note');
+    function showNote(text, isError) {
+      note.textContent = text;
+      note.className = 'batch-note' + (isError ? ' error' : '');
+      note.style.display = 'block';
+    }
+    var originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Preparing\u2026';
+    note.style.display = 'none';
+
+    authFetch('/api/qr/admin/batches/' + btn.dataset.id + '/coupons-link', { method: 'POST' })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          showNote(res.data.error || 'Could not start the download.', true);
+          btn.disabled = false;
+          btn.textContent = originalText;
+          return;
+        }
+        var a = document.createElement('a');
+        a.href = res.data.url;
+        a.download = '';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        showNote('Your download has started and will keep growing in your browser\u2019s downloads while the coupons are made. A large batch takes several minutes \u2013 keep the browser open until it finishes.', false);
+        setTimeout(function () { btn.disabled = false; btn.textContent = originalText; }, 5000);
+      })
+      .catch(function () {
+        showNote('Could not reach the server. Please check your connection.', true);
+        btn.disabled = false;
+        btn.textContent = originalText;
+      });
+  }
+
+  function exportBatch(btn) {
+    btn.disabled = true;
+    var originalText = btn.textContent;
+    btn.textContent = 'Preparing\u2026';
+    authFetch('/api/qr/admin/batches/' + btn.dataset.id + '/export')
+      .then(function (r) { return r.blob(); })
+      .then(function (blob) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'mellow-qr-' + btn.dataset.batchNumber.replace(/[^a-zA-Z0-9-_]+/g, '-') + '.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        btn.disabled = false;
+        btn.textContent = originalText;
+      })
+      .catch(function () {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      });
+  }
+
+  document.getElementById('qrGenerateBtn').addEventListener('click', function () {
+    clearQrErrors();
+    qrFormError.style.display = 'none';
+    qrFormSuccess.style.display = 'none';
+
+    var batchNumber = qrBatchNumber.value.trim();
+    var value = parseInt(qrValue.value, 10);
+    var quantity = parseInt(qrQuantity.value, 10);
+    var hasError = false;
+    if (!batchNumber) {
+      document.querySelector('[data-error-for="qrBatchNumber"]').textContent = 'Please enter a batch number.';
+      document.querySelector('[data-error-for="qrBatchNumber"]').style.display = 'block';
+      qrBatchNumber.classList.add('input-error'); hasError = true;
+    }
+    if (COUPON_VALUES.indexOf(value) === -1) {
+      document.querySelector('[data-error-for="qrValue"]').textContent = 'Please choose an amount.';
+      document.querySelector('[data-error-for="qrValue"]').style.display = 'block';
+      qrAmountPicker.classList.add('input-error'); hasError = true;
+    }
+    if (!quantity || quantity <= 0 || quantity > 20000) {
+      document.querySelector('[data-error-for="qrQuantity"]').textContent = 'Please enter a quantity between 1 and 20,000.';
+      document.querySelector('[data-error-for="qrQuantity"]').style.display = 'block';
+      qrQuantity.classList.add('input-error'); hasError = true;
+    }
+    if (hasError) return;
+
+    var btn = document.getElementById('qrGenerateBtn');
+    btn.disabled = true;
+    btn.textContent = quantity > 2000 ? 'Generating\u2026 this can take a moment' : 'Generating\u2026';
+
+    authFetch('/api/qr/admin/generate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ batch_number: batchNumber, value: value, quantity: quantity }),
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          if (res.data.field === 'batchNumber') {
+            document.querySelector('[data-error-for="qrBatchNumber"]').textContent = res.data.error;
+            document.querySelector('[data-error-for="qrBatchNumber"]').style.display = 'block';
+            qrBatchNumber.classList.add('input-error');
+          } else {
+            qrFormError.style.display = 'block';
+            qrFormError.textContent = res.data.error || 'Something went wrong.';
+          }
+        } else {
+          qrFormSuccess.style.display = 'block';
+          qrFormSuccess.textContent = res.data.message;
+          qrBatchNumber.value = ''; setAmount(''); qrQuantity.value = '';
+          loadBatches();
+        }
+        btn.disabled = false;
+        btn.textContent = 'Generate Batch';
+      })
+      .catch(function () {
+        qrFormError.style.display = 'block';
+        qrFormError.textContent = 'Could not reach the server. Please check your connection.';
+        btn.disabled = false;
+        btn.textContent = 'Generate Batch';
+      });
+  });
+
+  // ---------- Redemptions ----------
+  var redStatus = 'pending';
+  var redList = document.getElementById('redList');
+
+  function loadRedemptions() {
+    redList.innerHTML = '<div class="empty">Loading&hellip;</div>';
+    authFetch('/api/admin/redemptions?status=' + redStatus)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.redemptions || data.redemptions.length === 0) {
+          redList.innerHTML = '<div class="empty">No ' + redStatus + ' redemption requests.</div>';
+          return;
+        }
+        redList.innerHTML = data.redemptions.map(renderRedCard).join('');
+        attachRedHandlers();
+      })
+      .catch(function () { redList.innerHTML = '<div class="empty">Could not load redemptions.</div>'; });
+  }
+
+  function renderRedCard(r) {
+    var rejectionNote = r.status === 'rejected' && r.rejection_reason
+      ? '<div class="rejection-reason">Reason: ' + r.rejection_reason + '</div>' : '';
+    var actions = r.status === 'pending' ? (
+      '<div class="actions">' +
+        '<button class="btn btn-approve" data-action="approve-red" data-id="' + r.id + '">Mark Paid</button>' +
+        '<button class="btn btn-reject" data-action="show-reject-red" data-id="' + r.id + '">Reject</button>' +
+      '</div>' +
+      '<div class="reject-box" id="reject-red-' + r.id + '">' +
+        '<textarea placeholder="Reason for rejection" id="reason-red-' + r.id + '"></textarea>' +
+        '<div class="field-error" id="reason-red-error-' + r.id + '"></div>' +
+        '<div class="row"><button class="btn btn-reject" data-action="confirm-reject-red" data-id="' + r.id + '">Confirm Reject</button></div>' +
+      '</div>'
+    ) : '';
+
+    return '<div class="card">' +
+      '<div class="card-top">' +
+        '<div><div class="name">' + r.full_name + '</div><div class="shop">' + r.shop_name + '</div></div>' +
+        '<div class="status-pill ' + r.status + '">' + r.status + '</div>' +
+      '</div>' +
+      '<div class="detail-grid">' +
+        '<div><div class="dt">Amount Requested</div><div class="dd" style="font-weight:700;color:var(--red);">\u20a6 ' + r.amount.toLocaleString() + '</div></div>' +
+        '<div><div class="dt">Retailer Balance</div><div class="dd">\u20a6 ' + r.balance.toLocaleString() + '</div></div>' +
+        '<div><div class="dt">Phone (WhatsApp)</div><div class="dd">' + r.phone_number + '</div></div>' +
+        '<div><div class="dt">Requested</div><div class="dd">' + fmtDate(r.created_at) + '</div></div>' +
+        '<div><div class="dt">Bank</div><div class="dd">' + (r.bank_name || '\u2014') + '</div></div>' +
+        '<div><div class="dt">Account</div><div class="dd">' + (r.account_number || '\u2014') + ' (' + (r.account_name || '\u2014') + ')</div></div>' +
+      '</div>' + rejectionNote + actions + '</div>';
+  }
+
+  function attachRedHandlers() {
+    redList.querySelectorAll('[data-action="approve-red"]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        btn.disabled = true;
+        authFetch('/api/admin/redemptions/' + btn.dataset.id + '/approve', { method: 'POST' })
+          .then(function () { loadRedemptions(); }).catch(function () {});
+      });
+    });
+    redList.querySelectorAll('[data-action="show-reject-red"]').forEach(function (btn) {
+      btn.addEventListener('click', function () { document.getElementById('reject-red-' + btn.dataset.id).style.display = 'block'; });
+    });
+    redList.querySelectorAll('[data-action="confirm-reject-red"]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.dataset.id;
+        var reason = document.getElementById('reason-red-' + id).value.trim();
+        var errorEl = document.getElementById('reason-red-error-' + id);
+        if (!reason) { errorEl.textContent = 'Please provide a rejection reason.'; errorEl.style.display = 'block'; return; }
+        btn.disabled = true;
+        authFetch('/api/admin/redemptions/' + id + '/reject', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: reason }),
+        }).then(function () { loadRedemptions(); }).catch(function () {});
+      });
+    });
+  }
+
+  document.querySelectorAll('#redTabs button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('#redTabs button').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      redStatus = btn.dataset.status;
+      loadRedemptions();
+    });
+  });
+
+  // ---------- Init ----------
+  var initialView = (location.hash || '').replace('#', '') || 'dashboard';
+  switchView(initialView, false);
+</script>
+</body>
+</html>

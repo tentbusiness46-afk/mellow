@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Environment secrets - never commit real credentials
+.env
+
+# Local file uploads (STORAGE_MODE=local) - never commit ID docs / shop photos
+backend/uploads/
+
+# Local Turso/libSQL dev database (created when TURSO_DATABASE_URL=file:...)
+backend/db/local.db
+backend/db/local.db-*
+*.db
+*.db-*
+
+# Logs
+npm-debug.log*
+*.log
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Build artifacts
+*.zip
