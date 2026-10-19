@@ -39,14 +39,14 @@ router.post('/register', async (req, res) => {
     if (!shop_name || !shop_name.trim()) return badRequest(res, 'shop_name', 'Please enter your shop/business name.');
     if (!shop_state || !shop_state.trim()) return badRequest(res, 'shop_state', 'Please enter your state.');
     if (!shop_city || !shop_city.trim()) return badRequest(res, 'shop_city', 'Please enter your city or LGA.');
-    if (!RETAILER_TYPES.includes(retailer_type)) return badRequest(res, 'retailer_type', 'Please select a retailer type.');
     if (stocking_mellow === undefined || stocking_mellow === null) {
       return badRequest(res, 'stocking_mellow', 'Please let us know if you currently stock Mellow.');
     }
     if (!REFERRAL_SOURCES.includes(referral_source)) {
       return badRequest(res, 'referral_source', 'Please tell us how you heard about Mellow.');
     }
-    if (!referral_distributor_phone || !referral_distributor_phone.trim()) {
+    const viaDistributor = referral_source === 'distributor referral';
+    if (viaDistributor && (!referral_distributor_phone || !referral_distributor_phone.trim())) {
       return badRequest(res, 'referral_distributor_phone', "Please enter your referring distributor's phone number.");
     }
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -61,13 +61,18 @@ router.post('/register', async (req, res) => {
       return badRequest(res, 'email', 'An account with this email already exists.');
     }
 
-    const distributorResult = await db.execute({
-      sql: 'SELECT id FROM distributors WHERE phone_number = ?',
-      args: [referral_distributor_phone.trim()],
-    });
-    const distributor = distributorResult.rows[0];
-    if (!distributor) {
-      return badRequest(res, 'referral_distributor_phone', 'No distributor found with this phone number. Please check and try again.');
+    // Only retailers who came through a distributor need one on record.
+    let distributorId = null;
+    if (viaDistributor) {
+      const distributorResult = await db.execute({
+        sql: 'SELECT id FROM distributors WHERE phone_number = ?',
+        args: [referral_distributor_phone.trim()],
+      });
+      const distributor = distributorResult.rows[0];
+      if (!distributor) {
+        return badRequest(res, 'referral_distributor_phone', 'No distributor found with this phone number. Please check and try again.');
+      }
+      distributorId = distributor.id;
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -86,11 +91,11 @@ router.post('/register', async (req, res) => {
         shop_state.trim(),
         shop_city.trim(),
         (shop_address || '').trim(),
-        retailer_type,
+        'other', // retailer type is no longer asked; column is NOT NULL
         stocking_mellow ? 1 : 0,
         stocking_mellow ? (stocking_since || '').trim() : null,
         referral_source,
-        distributor.id,
+        distributorId,
         email.toLowerCase().trim(),
         passwordHash,
       ],

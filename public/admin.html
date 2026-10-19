@@ -813,7 +813,6 @@
         '<div><div class="dt">Email</div><div class="dd">' + reg.email + '</div></div>' +
         '<div><div class="dt">Location</div><div class="dd">' + reg.shop_city + ', ' + reg.shop_state + '</div></div>' +
         '<div><div class="dt">Address</div><div class="dd">' + (reg.shop_address || '&mdash;') + '</div></div>' +
-        '<div><div class="dt">Retailer Type</div><div class="dd">' + reg.retailer_type + '</div></div>' +
         '<div><div class="dt">Stocking Mellow?</div><div class="dd">' + (reg.stocking_mellow ? ('Yes, since ' + (reg.stocking_since || '\u2014')) : 'No') + '</div></div>' +
         '<div><div class="dt">Heard via</div><div class="dd">' + reg.referral_source + '</div></div>' +
         '<div><div class="dt">Submitted</div><div class="dd">' + fmtDate(reg.created_at) + '</div></div>' +
@@ -960,7 +959,6 @@
 
       '<div class="account-card">' +
         '<div class="group-title">Shop</div>' +
-        '<div class="account-row"><div class="k">Retailer Type</div><div class="v">' + u.retailer_type + '</div></div>' +
         '<div class="account-row"><div class="k">Location</div><div class="v">' + u.shop_city + ', ' + u.shop_state + '</div></div>' +
         '<div class="account-row"><div class="k">Address</div><div class="v">' + (u.shop_address || '\u2014') + '</div></div>' +
         '<div class="account-row"><div class="k">Stocking Mellow?</div><div class="v">' + (u.stocking_mellow ? ('Yes, since ' + (u.stocking_since || '\u2014')) : 'No') + '</div></div>' +

@@ -126,16 +126,6 @@
         </div>
         <input id="shop_address" name="shop_address" placeholder="Landmark or full address (optional)" style="margin-top: 10px;">
 
-        <label for="retailer_type">Type of Retailer</label>
-        <select id="retailer_type" name="retailer_type">
-          <option value="">Select an option</option>
-          <option value="standalone shop">Standalone shop</option>
-          <option value="market stall">Market stall</option>
-          <option value="supermarket">Supermarket</option>
-          <option value="distributor">Distributor</option>
-          <option value="other">Other</option>
-        </select>
-        <div class="field-error" data-error-for="retailer_type"></div>
 
         <label>Currently stocking Mellow?</label>
         <div class="radio-group" id="stockingGroup">
@@ -159,9 +149,11 @@
         </select>
         <div class="field-error" data-error-for="referral_source"></div>
 
-        <label for="referral_distributor_phone">Referring Distributor's Phone Number</label>
-        <input id="referral_distributor_phone" name="referral_distributor_phone" placeholder="080 1234 5678">
-        <div class="field-error" data-error-for="referral_distributor_phone"></div>
+        <div id="referralPhoneWrap" class="hidden">
+          <label for="referral_distributor_phone">Referring Distributor's Phone Number</label>
+          <input id="referral_distributor_phone" name="referral_distributor_phone" placeholder="080 1234 5678">
+          <div class="field-error" data-error-for="referral_distributor_phone"></div>
+        </div>
 
         <label for="regEmail">Email ID</label>
         <input id="regEmail" name="email" type="email" placeholder="you@example.com" autocomplete="email">
@@ -296,6 +288,10 @@
     });
   });
 
+  registerForm.referral_source.addEventListener('change', function () {
+    document.getElementById('referralPhoneWrap').classList.toggle('hidden', this.value !== 'distributor referral');
+  });
+
   registerForm.addEventListener('submit', function (e) {
     e.preventDefault();
     clearErrors(registerForm);
@@ -308,9 +304,8 @@
       shop_state: registerForm.shop_state.value.trim(),
       shop_city: registerForm.shop_city.value.trim(),
       shop_address: registerForm.shop_address.value.trim(),
-      retailer_type: registerForm.retailer_type.value,
       referral_source: registerForm.referral_source.value,
-      referral_distributor_phone: registerForm.referral_distributor_phone.value.trim(),
+      referral_distributor_phone: registerForm.referral_source.value === 'distributor referral' ? registerForm.referral_distributor_phone.value.trim() : '',
       email: document.getElementById('regEmail').value.trim(),
       password: document.getElementById('regPassword').value,
     };
@@ -324,10 +319,9 @@
     if (!data.shop_name) { showError('shop_name', 'Please enter your shop/business name.'); hasError = true; }
     if (!data.shop_state) { showError('shop_state', 'Please enter your state.'); hasError = true; }
     if (!data.shop_city) { showError('shop_city', 'Please enter your city or LGA.'); hasError = true; }
-    if (!data.retailer_type) { showError('retailer_type', 'Please select a retailer type.'); hasError = true; }
     if (data.stocking_mellow === null) { showError('stocking_mellow', 'Please select an option.'); hasError = true; }
     if (!data.referral_source) { showError('referral_source', 'Please select an option.'); hasError = true; }
-    if (!data.referral_distributor_phone) { showError('referral_distributor_phone', "Please enter your referring distributor's phone number."); hasError = true; }
+    if (data.referral_source === 'distributor referral' && !data.referral_distributor_phone) { showError('referral_distributor_phone', "Please enter your referring distributor's phone number."); hasError = true; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) { showError('regEmail', 'Please enter a valid email address.'); hasError = true; }
     if (!data.password || data.password.length < 6) { showError('regPassword', 'Password must be at least 6 characters.'); hasError = true; }
     if (hasError) return;
@@ -365,6 +359,7 @@
     registerForm.reset();
     document.querySelectorAll('#stockingGroup .radio-option').forEach(function (o) { o.classList.remove('selected'); });
     document.getElementById('stockingSinceWrap').classList.add('hidden');
+    document.getElementById('referralPhoneWrap').classList.add('hidden');
     document.getElementById('successView').style.display = 'none';
     document.getElementById('authView').style.display = 'block';
     setTab('login');
