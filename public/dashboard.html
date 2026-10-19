@@ -489,7 +489,7 @@
   }
   function fmtDate(iso) {
     var d = new Date(iso.replace(' ', 'T') + 'Z');
-    return d.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' });
+    return d.toLocaleString('en-NG', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
 
   // ---------- Tab / view switching ----------

@@ -7,6 +7,7 @@ const authRoutes = require('./routes/auth');
 const adminAuthRoutes = require('./routes/admin-auth');
 const userRoutes = require('./routes/user');
 const couponRoutes = require('./routes/coupons');
+const codeRoutes = require('./routes/codes');
 const qrRoutes = require('./routes/qr');
 const adminRoutes = require('./routes/admin');
 const enquiryRoutes = require('./routes/enquiries');
@@ -28,6 +29,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin-auth', adminAuthRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/qr', couponRoutes); // must stay above qrRoutes (coupon ZIP + scan lockout)
+app.use('/api/qr', codeRoutes);   // per-code status for the admin panel
 app.use('/api/qr', qrRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/enquiries', enquiryRoutes); // website contact + partner forms; admin list under /admin

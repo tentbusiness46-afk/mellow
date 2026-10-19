@@ -23,6 +23,24 @@
   .btn-ghost.danger { color: var(--red); }
   .enq-filter { margin: -6px 0 18px; }
   .enq-filter select { padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); font-family: inherit; font-size: 13.5px; color: var(--text); }
+
+  /* ---------- Per-code status ---------- */
+  .status-pill.scanned { background: var(--success-bg); color: var(--success); }
+  .status-pill.available { background: #eeeeec; color: var(--text-muted); }
+  .code-lookup { margin: 0 0 22px; }
+  .code-lookup .search-box { margin-bottom: 10px; }
+  .code-lookup .hint { font-size: 12.5px; color: var(--text-muted); margin: -4px 0 8px; }
+  .progress { height: 8px; border-radius: 8px; background: #eeeeec; overflow: hidden; margin: 14px 0 6px; }
+  .progress i { display: block; height: 100%; background: var(--red); border-radius: 8px; }
+  .progress-meta { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-muted); font-weight: 600; }
+  .code-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 10px; }
+  .code-row .code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 700; font-size: 14.5px; letter-spacing: .2px; word-break: break-all; }
+  .code-row .sub { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; line-height: 1.5; }
+  .code-row .who a, .code-row .who button { color: var(--red); font-weight: 700; background: none; border: none; padding: 0; font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; }
+  .code-row .right { text-align: right; flex: none; }
+  .code-row .amt { font-weight: 800; font-size: 14px; margin-top: 6px; }
+  .more-btn { display: block; margin: 16px auto 0; }
+  .batch-actions .btn-export.primary { background: var(--text); color: #fff; border-color: var(--text); }
 </style>
 <script>
   if (!localStorage.getItem('mellow_admin_token')) window.location.href = '/admin-login';
@@ -399,6 +417,11 @@
           <button class="btn-primary" id="qrGenerateBtn" type="button">Generate Batch</button>
         </div>
 
+        <div class="code-lookup">
+          <input class="search-box" id="codeLookup" placeholder="Check a code: type or paste it to see if it has been scanned&hellip;" autocomplete="off">
+          <div id="codeLookupResults"></div>
+        </div>
+
         <div id="batchList"></div>
       </section>
 
@@ -427,6 +450,20 @@
         </div>
         <div class="enq-filter"><select id="enqKind"><option value="">All types</option><option value="contact">Contact messages</option><option value="partner">Partner applications</option></select></div>
         <div id="enqList"></div>
+      </section>
+
+      <!-- ============ BATCH CODES ============ -->
+      <section id="view-batch-codes" class="view">
+        <button class="user-detail-back" id="batchCodesBackBtn" type="button">&larr; Back to QR Codes</button>
+        <div id="batchCodesHead"></div>
+        <div class="tabs" id="codeTabs">
+          <button data-status="all" class="active">All</button>
+          <button data-status="scanned">Scanned</button>
+          <button data-status="unscanned">Not scanned</button>
+        </div>
+        <input class="search-box" id="codeSearch" placeholder="Search this batch by code&hellip;" autocomplete="off">
+        <div id="codeList"></div>
+        <button class="btn-export more-btn" id="codeMore" type="button" style="display:none">Load more</button>
       </section>
 
       <section id="view-user-detail" class="view">
@@ -486,22 +523,23 @@
   }
 
   function fmtDate(iso) {
-    var d = new Date(iso.replace(' ', 'T') + 'Z');
-    return d.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' });
+    if (!iso) return '—'; var d = new Date(String(iso).replace(' ', 'T') + 'Z'); if (isNaN(d)) return '—';
+    return d.toLocaleString('en-NG', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
 
   // ---------- View switching ----------
-  var VIEWS = ['dashboard', 'registrations', 'users', 'distributors', 'qr-codes', 'redemptions', 'enquiries', 'user-detail', 'distributor-detail'];
+  var VIEWS = ['dashboard', 'registrations', 'users', 'distributors', 'qr-codes', 'redemptions', 'enquiries', 'batch-codes', 'user-detail', 'distributor-detail'];
   var loadedOnce = {};
 
   function switchView(name, updateHash) {
     if (VIEWS.indexOf(name) === -1) name = 'dashboard';
+    if (name === 'batch-codes' && !codeState.id) name = 'qr-codes';
     VIEWS.forEach(function (v) {
       document.getElementById('view-' + v).classList.toggle('active', v === name);
     });
     // "user-detail" isn't a real sidebar destination - keep Users highlighted
     // while looking at a retailer's profile, since that's where you came from.
-    var highlightName = name === 'user-detail' ? 'users' : (name === 'distributor-detail' ? 'distributors' : name);
+    var highlightName = name === 'batch-codes' ? 'qr-codes' : name === 'user-detail' ? (userDetailReturn === 'users' ? 'users' : 'qr-codes') : (name === 'distributor-detail' ? 'distributors' : name);
     document.querySelectorAll('.nav-link[data-view]').forEach(function (el) {
       el.classList.toggle('active', el.dataset.view === highlightName);
     });
@@ -606,6 +644,107 @@
   document.getElementById('enqKind').addEventListener('change', function (e) { enqKind = e.target.value; loadEnquiries(); });
   refreshEnqBadge();
 
+
+  // ---------- Per-code status ----------
+  var CODE_PAGE = 50;
+  var codeState = { id: null, status: 'all', q: '', offset: 0, loading: false };
+  var codeSearchTimer = null;
+  var userDetailReturn = 'users';
+
+  function codeRow(c, batchNumber) {
+    var scanned = Number(c.is_used) === 1;
+    var who = '';
+    if (scanned) {
+      who = c.used_by
+        ? '<div class="sub who">Scanned by <button type="button" data-user="' + esc(c.used_by) + '">' + esc(c.full_name || 'Unknown retailer') + '</button>' +
+          (c.shop_name ? ' &middot; ' + esc(c.shop_name) : '') + (c.phone_number ? ' &middot; ' + esc(c.phone_number) : '') + '</div>'
+        : '<div class="sub">Scanned (retailer no longer available)</div>';
+      who += '<div class="sub">' + (c.used_at ? fmtDate(c.used_at) : '') + '</div>';
+    }
+    return '<div class="code-row"><div><div class="code">' + esc(c.code) + '</div>' +
+      (batchNumber ? '<div class="sub">Batch ' + esc(batchNumber) + '</div>' : '') + who + '</div>' +
+      '<div class="right"><div class="status-pill ' + (scanned ? 'scanned' : 'available') + '">' + (scanned ? 'Scanned' : 'Available') + '</div>' +
+      '<div class="amt">\u20a6 ' + Number(c.value).toLocaleString() + '</div></div></div>';
+  }
+
+  function openUserFromCode(id) {
+    userDetailReturn = document.getElementById('view-batch-codes').classList.contains('active') ? 'batch-codes' : 'qr-codes';
+    openUserDetail(id);
+  }
+  document.getElementById('codeList').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-user]'); if (b) openUserFromCode(b.dataset.user);
+  });
+  document.getElementById('codeLookupResults').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-user]'); if (b) openUserFromCode(b.dataset.user);
+  });
+
+  function openBatchCodes(id) {
+    codeState = { id: id, status: 'all', q: '', offset: 0, loading: false };
+    document.getElementById('codeSearch').value = '';
+    document.querySelectorAll('#codeTabs button').forEach(function (b) { b.classList.toggle('active', b.dataset.status === 'all'); });
+    document.getElementById('batchCodesHead').innerHTML = '<div class="empty">Loading&hellip;</div>';
+    switchView('batch-codes');
+    loadCodes(true);
+  }
+
+  function loadCodes(reset) {
+    if (codeState.loading) return;
+    codeState.loading = true;
+    if (reset) { codeState.offset = 0; document.getElementById('codeList').innerHTML = ''; }
+    var url = '/api/qr/admin/batches/' + codeState.id + '/codes?status=' + codeState.status +
+      '&q=' + encodeURIComponent(codeState.q) + '&limit=' + CODE_PAGE + '&offset=' + codeState.offset;
+    authFetch(url).then(function (r) { return r.json(); }).then(function (data) {
+      codeState.loading = false;
+      if (!data.codes) { document.getElementById('batchCodesHead').innerHTML = '<div class="empty">Could not load this batch.</div>'; return; }
+      var b = data.batch, pct = data.total ? Math.round((data.scanned / data.total) * 100) : 0;
+      document.getElementById('batchCodesHead').innerHTML =
+        '<h1 class="view-title">' + esc(b.batch_number || 'Batch') + '</h1>' +
+        '<p class="view-sub">\u20a6 ' + b.value.toLocaleString() + ' \u00d7 ' + b.quantity.toLocaleString() + ' &middot; generated ' + fmtDate(b.created_at) + '</p>' +
+        '<div class="card"><div class="progress-meta"><span>' + data.scanned.toLocaleString() + ' scanned</span><span>' + (data.total - data.scanned).toLocaleString() + ' left</span></div>' +
+        '<div class="progress"><i style="width:' + pct + '%"></i></div>' +
+        '<div class="progress-meta"><span>' + pct + '% scanned</span><span>' + data.total.toLocaleString() + ' codes</span></div></div>';
+      var list = document.getElementById('codeList');
+      if (reset && !data.codes.length) {
+        list.innerHTML = '<div class="empty">' + (codeState.q ? 'No code matching \u201c' + esc(codeState.q) + '\u201d in this batch.' : 'No codes to show.') + '</div>';
+      } else {
+        list.insertAdjacentHTML('beforeend', data.codes.map(function (c) { return codeRow(c); }).join(''));
+      }
+      codeState.offset += data.codes.length;
+      document.getElementById('codeMore').style.display = codeState.offset < data.matches ? '' : 'none';
+    }).catch(function () {
+      codeState.loading = false;
+      document.getElementById('codeList').innerHTML = '<div class="empty">Could not load codes.</div>';
+    });
+  }
+
+  document.getElementById('batchCodesBackBtn').addEventListener('click', function () { switchView('qr-codes'); });
+  document.getElementById('codeMore').addEventListener('click', function () { loadCodes(false); });
+  document.querySelectorAll('#codeTabs button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('#codeTabs button').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active'); codeState.status = btn.dataset.status; loadCodes(true);
+    });
+  });
+  document.getElementById('codeSearch').addEventListener('input', function (e) {
+    clearTimeout(codeSearchTimer);
+    var v = e.target.value;
+    codeSearchTimer = setTimeout(function () { codeState.q = v.trim(); loadCodes(true); }, 300);
+  });
+
+  // Check a code across every batch
+  var lookupTimer = null;
+  document.getElementById('codeLookup').addEventListener('input', function (e) {
+    clearTimeout(lookupTimer);
+    var v = e.target.value.trim(), box = document.getElementById('codeLookupResults');
+    if (v.length < 3) { box.innerHTML = v.length ? '<div class="hint">Type at least 3 characters.</div>' : ''; return; }
+    lookupTimer = setTimeout(function () {
+      authFetch('/api/qr/admin/codes/lookup?q=' + encodeURIComponent(v)).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.codes || !d.codes.length) { box.innerHTML = '<div class="empty" style="padding:24px 0">No code matches \u201c' + esc(v) + '\u201d.</div>'; return; }
+        box.innerHTML = d.codes.map(function (c) { return codeRow(c, c.batch_number || ''); }).join('') +
+          (d.truncated ? '<div class="hint">Showing the first 30 matches. Type more of the code to narrow it down.</div>' : '');
+      }).catch(function () { box.innerHTML = '<div class="empty">Could not search.</div>'; });
+    }, 300);
+  });
   // ---------- Dashboard ----------
   function loadStats() {
     authFetch('/api/admin/stats')
@@ -733,7 +872,7 @@
             '</div>';
         }).join('');
         usersList.querySelectorAll('.user-card').forEach(function (el) {
-          el.addEventListener('click', function () { openUserDetail(el.dataset.userId); });
+          el.addEventListener('click', function () { userDetailReturn = 'users'; openUserDetail(el.dataset.userId); });
         });
       })
       .catch(function () { usersList.innerHTML = '<div class="empty">Could not load users.</div>'; });
@@ -742,7 +881,10 @@
   searchBox.addEventListener('input', function () { clearTimeout(searchTimer); searchTimer = setTimeout(loadUsers, 300); });
 
   // ---------- User detail (profile + scan history + redemption history) ----------
-  document.getElementById('userDetailBackBtn').addEventListener('click', function () { switchView('users'); });
+  document.getElementById('userDetailBackBtn').addEventListener('click', function () {
+    var back = userDetailReturn; userDetailReturn = 'users';
+    switchView(back);
+  });
 
   function openUserDetail(id) {
     switchView('user-detail');
@@ -1045,7 +1187,7 @@
       usersHtml;
 
     content.querySelectorAll('[data-user-id]').forEach(function (el) {
-      el.addEventListener('click', function () { openUserDetail(el.dataset.userId); });
+      el.addEventListener('click', function () { userDetailReturn = 'users'; openUserDetail(el.dataset.userId); });
     });
   }
 
@@ -1089,6 +1231,7 @@
             '<div class="batch-value">\u20a6 ' + b.value.toLocaleString() + ' \u00d7 ' + b.quantity + '</div>' +
             '<div class="batch-meta">' + b.used_count + ' used &middot; ' + (b.quantity - b.used_count) + ' remaining &middot; generated ' + fmtDate(b.created_at) + '</div></div>' +
             '<div class="batch-actions">' +
+              '<button class="btn-export primary" data-action="codes-view" data-id="' + b.id + '">View codes</button>' +
               '<button class="btn-export" data-action="export" data-id="' + b.id + '" data-batch-number="' + (b.batch_number || 'batch') + '">Export XLSX</button>' +
               (COUPON_VALUES.indexOf(Number(b.value)) !== -1
                 ? '<button class="btn-export" data-action="coupons" data-id="' + b.id + '">Export ZIP</button>'
@@ -1097,6 +1240,9 @@
             '<div class="batch-note"></div>' +
           '</div>';
         }).join('');
+        batchList.querySelectorAll('[data-action="codes-view"]').forEach(function (btn) {
+          btn.addEventListener('click', function () { openBatchCodes(btn.dataset.id); });
+        });
         batchList.querySelectorAll('[data-action="export"]').forEach(function (btn) {
           btn.addEventListener('click', function () { exportBatch(btn); });
         });

@@ -239,8 +239,8 @@
   }
 
   function fmtDate(iso) {
-    var d = new Date(iso.replace(' ', 'T') + 'Z');
-    return d.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' });
+    if (!iso) return '—'; var d = new Date(String(iso).replace(' ', 'T') + 'Z'); if (isNaN(d)) return '—';
+    return d.toLocaleString('en-NG', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
 
   // ---------- View switching ----------
