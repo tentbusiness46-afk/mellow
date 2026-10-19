@@ -347,7 +347,7 @@
       scansHtml = data.scans.map(function (s) {
         return '<div class="scan-item">' +
           '<div class="scan-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></div>' +
-          '<div class="scan-mid"><div class="scan-title">QR Code Scanned</div><div class="scan-time">' + fmtDate(s.used_at) + '</div></div>' +
+          '<div class="scan-mid"><div class="scan-title">' + (s.code ? String(s.code).replace(/[<>&"]/g,'') : 'QR Code Scanned') + '</div><div class="scan-time">' + fmtDate(s.used_at) + '</div></div>' +
           '<div class="scan-amount">+\u20a6 ' + s.value.toLocaleString() + '</div>' +
         '</div>';
       }).join('');

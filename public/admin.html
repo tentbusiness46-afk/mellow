@@ -195,6 +195,8 @@
   .btn-primary { margin-top: 18px; padding: 13px 20px; border: none; border-radius: 10px; background: var(--red); color: #fff; font-weight: 700; font-size: 14.5px; cursor: pointer; font-family: inherit; }
   .btn-primary:disabled { opacity: 0.6; cursor: default; }
 
+  .batch-card.clickable { cursor: pointer; transition: border-color .15s; }
+  .batch-card.clickable:hover { border-color: #111; }
   .batch-card { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
   .batch-number { font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
   .batch-value { font-weight: 700; font-size: 20px; }
@@ -455,7 +457,7 @@
       <!-- ============ BATCH CODES ============ -->
       <section id="view-batch-codes" class="view">
         <button class="user-detail-back" id="batchCodesBackBtn" type="button">&larr; Back to QR Codes</button>
-        <div id="batchCodesHead"></div>
+        <div id="batchCodesHead" style="margin-top:18px;"></div>
         <div class="tabs" id="codeTabs">
           <button data-status="all" class="active">All</button>
           <button data-status="scanned">Scanned</button>
@@ -696,13 +698,13 @@
     authFetch(url).then(function (r) { return r.json(); }).then(function (data) {
       codeState.loading = false;
       if (!data.codes) { document.getElementById('batchCodesHead').innerHTML = '<div class="empty">Could not load this batch.</div>'; return; }
-      var b = data.batch, pct = data.total ? Math.round((data.scanned / data.total) * 100) : 0;
+      var b = data.batch, pct = data.total ? (data.scanned / data.total) * 100 : 0;
       document.getElementById('batchCodesHead').innerHTML =
         '<h1 class="view-title">' + esc(b.batch_number || 'Batch') + '</h1>' +
         '<p class="view-sub">\u20a6 ' + b.value.toLocaleString() + ' \u00d7 ' + b.quantity.toLocaleString() + ' &middot; generated ' + fmtDate(b.created_at) + '</p>' +
         '<div class="card"><div class="progress-meta"><span>' + data.scanned.toLocaleString() + ' scanned</span><span>' + (data.total - data.scanned).toLocaleString() + ' left</span></div>' +
-        '<div class="progress"><i style="width:' + pct + '%"></i></div>' +
-        '<div class="progress-meta"><span>' + pct + '% scanned</span><span>' + data.total.toLocaleString() + ' codes</span></div></div>';
+        '<div class="progress"><i style="width:' + pct.toFixed(2) + '%"></i></div>' +
+        '<div class="progress-meta"><span>' + pct.toFixed(2) + '% scanned</span><span>' + data.total.toLocaleString() + ' codes</span></div></div>';
       var list = document.getElementById('codeList');
       if (reset && !data.codes.length) {
         list.innerHTML = '<div class="empty">' + (codeState.q ? 'No code matching \u201c' + esc(codeState.q) + '\u201d in this batch.' : 'No codes to show.') + '</div>';
@@ -928,7 +930,7 @@
       scansHtml = data.scans.map(function (s) {
         return '<div class="scan-item">' +
           '<div class="scan-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></div>' +
-          '<div class="scan-mid"><div class="scan-title">QR Code Scanned</div><div class="scan-time">' + fmtDate(s.used_at) + '</div></div>' +
+          '<div class="scan-mid"><div class="scan-title">' + (s.code ? esc(s.code) : 'QR Code Scanned') + '</div><div class="scan-time">' + fmtDate(s.used_at) + '</div></div>' +
           '<div class="scan-amount">+\u20a6 ' + s.value.toLocaleString() + '</div>' +
         '</div>';
       }).join('');
@@ -1226,12 +1228,11 @@
       .then(function (data) {
         if (!data.batches || data.batches.length === 0) { batchList.innerHTML = '<div class="empty">No QR batches generated yet.</div>'; return; }
         batchList.innerHTML = data.batches.map(function (b) {
-          return '<div class="card batch-card">' +
+          return '<div class="card batch-card clickable" data-batch="' + b.id + '">' +
             '<div><div class="batch-number">' + (b.batch_number || '\u2014') + '</div>' +
             '<div class="batch-value">\u20a6 ' + b.value.toLocaleString() + ' \u00d7 ' + b.quantity + '</div>' +
             '<div class="batch-meta">' + b.used_count + ' used &middot; ' + (b.quantity - b.used_count) + ' remaining &middot; generated ' + fmtDate(b.created_at) + '</div></div>' +
             '<div class="batch-actions">' +
-              '<button class="btn-export primary" data-action="codes-view" data-id="' + b.id + '">View codes</button>' +
               '<button class="btn-export" data-action="export" data-id="' + b.id + '" data-batch-number="' + (b.batch_number || 'batch') + '">Export XLSX</button>' +
               (COUPON_VALUES.indexOf(Number(b.value)) !== -1
                 ? '<button class="btn-export" data-action="coupons" data-id="' + b.id + '">Export ZIP</button>'
@@ -1240,8 +1241,11 @@
             '<div class="batch-note"></div>' +
           '</div>';
         }).join('');
-        batchList.querySelectorAll('[data-action="codes-view"]').forEach(function (btn) {
-          btn.addEventListener('click', function () { openBatchCodes(btn.dataset.id); });
+        batchList.querySelectorAll('.batch-card').forEach(function (card) {
+          card.addEventListener('click', function (e) {
+            if (e.target.closest('button, a')) return;
+            openBatchCodes(card.dataset.batch);
+          });
         });
         batchList.querySelectorAll('[data-action="export"]').forEach(function (btn) {
           btn.addEventListener('click', function () { exportBatch(btn); });

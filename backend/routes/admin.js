@@ -100,7 +100,7 @@ router.get('/users/:id/full', requireAdmin, async (req, res) => {
 
   const [scansResult, redemptionsResult] = await Promise.all([
     db.execute({
-      sql: 'SELECT value, used_at FROM qr_codes WHERE used_by = ? ORDER BY used_at DESC LIMIT 100',
+      sql: 'SELECT code, value, used_at FROM qr_codes WHERE used_by = ? ORDER BY used_at DESC LIMIT 100',
       args: [req.params.id],
     }),
     db.execute({
